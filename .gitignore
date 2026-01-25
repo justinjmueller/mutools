@@ -1,0 +1,11 @@
+# Package distribution files
+*.egg-info/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# UV environment
+.venv/
+uv.lock

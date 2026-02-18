@@ -1,3 +1,7 @@
+"""
+Helper functions for generic plotting tasks.
+"""
+
 from typing import Optional
 
 

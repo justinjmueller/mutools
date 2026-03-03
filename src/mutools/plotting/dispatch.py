@@ -1,0 +1,92 @@
+"""
+Dispatcher for PROfit-style plots driven by a TOML configuration.
+"""
+
+from pathlib import Path
+from typing import Union
+
+import toml
+
+from .profit import ProfitPlotData, histogram
+
+# Map of plot type strings to their handler functions. New plot types
+# can be registered here as the module grows.
+_HANDLERS = {
+    "histogram": histogram,
+}
+
+
+def run(config: Union[dict, str, Path]) -> None:
+    """
+    Execute all plots defined in a PROfit TOML configuration.
+
+    The configuration can be supplied as a pre-parsed dict, a raw TOML
+    string, or a path to a TOML file. Each ``[[plot]]`` entry is
+    dispatched to the appropriate plotting function based on its
+    ``type`` key, and is repeated for every detector listed in
+    ``plot.detectors``.
+
+    Parameters
+    ----------
+    config : dict, str, or Path
+        The configuration as a pre-parsed dict, a TOML string, or a
+        path to a TOML file.
+
+    Raises
+    ------
+    ValueError
+        If a ``[[plot]]`` entry specifies an unsupported ``type``.
+    """
+    if isinstance(config, (str, Path)):
+        path = Path(config)
+        if path.exists():
+            with open(path) as f:
+                plots = toml.load(f)
+        else:
+            plots = toml.loads(str(config))
+    else:
+        plots = config
+
+    general = plots["general"]
+    source = Path(general["input"])
+    output = Path(general["output"]) if general.get("savefig", False) else None
+
+    # Shared keyword arguments that apply to every plot.
+    base = {
+        "code_version": general["code_version"],
+        "selection_version": general["selection_version"],
+        "subchannels": general["subchannels"],
+        "output": output,
+    }
+
+    for plot in plots["plot"]:
+        plot_type = plot["type"]
+        if plot_type not in _HANDLERS:
+            raise ValueError(
+                f"Unsupported plot type: {plot_type!r}. "
+                f"Available types: {sorted(_HANDLERS)}"
+            )
+
+        handler = _HANDLERS[plot_type]
+
+        # ProfitPlotData is instantiated once per plot entry since
+        # scale-by-width is a per-plot setting shared across detectors.
+        data = ProfitPlotData(source, plot.get("scale-by-width", "null"))
+
+        for detector in plot["detectors"]:
+            kwargs = {
+                **base,
+                "variable": plot["variable"],
+                "detector": detector,
+                "detector_label": general["detectors"][detector],
+                "xlabel": plot["xlabel"],
+                "ylabel": plot["ylabel"],
+                "xlim": plot.get("xlim"),
+                "ylim": plot.get("ylim"),
+                "ratio": plot.get("ratio"),
+                "rlim": plot.get("rlim"),
+            }
+            if "watermark" in plot:
+                kwargs["watermark"] = plot["watermark"]
+
+            handler(data, **kwargs)

@@ -63,8 +63,7 @@ def run(config: Union[dict, str, Path]) -> None:
         plot_type = plot["type"]
         if plot_type not in _HANDLERS:
             raise ValueError(
-                f"Unsupported plot type: {plot_type!r}. "
-                f"Available types: {sorted(_HANDLERS)}"
+                f"Unsupported plot type: {plot_type!r}. Available types: {sorted(_HANDLERS)}"
             )
 
         handler = _HANDLERS[plot_type]

@@ -21,6 +21,7 @@ Tools for reading and visualizing data from [PROfit](https://github.com/ubneutri
 | `ProfitPlotData` | Reads a PROfit ROOT file and organizes histogram contents, error bands, and fractional systematics into named traces. |
 | `TraceType` | Enum identifying the three trace types: `HIST_CONTENTS`, `HIST_ERROR_BAND`, `FRAC_SYST`. |
 | `histogram(data, ...)` | High-level function that produces a stacked histogram with an error band and an optional ratio panel. |
+| `uncertainty(data, ...)` | Step plot of fractional systematic uncertainties for a set of named systematic tags. |
 | `add_error_band(ax, ...)` | Add a hatched uncertainty band to an existing axes. |
 | `add_outline(ax, ...)` | Overlay black step-line outlines on a stacked histogram. |
 | `construct_proxy_stack(subchannels)` | Build legend `Patch` handles matching the default color cycle. |
@@ -45,16 +46,17 @@ TOML-driven dispatcher that reads a configuration and executes all defined plots
 | | `selection_version` | Version string included in legend metadata. |
 | | `subchannels` | Ordered list of subchannel names. |
 | | `detectors` | List of detector label strings (indexed by detector number). |
-| `[[plot]]` | `type` | Plot type — currently `"histogram"`. |
+| `[[plot]]` | `type` | Plot type — `"histogram"` or `"uncertainty"`. |
 | | `variable` | Variable index within the PROfit configuration. |
 | | `detectors` | List of detector indices to plot. |
 | | `xlabel` | x-axis label. |
 | | `ylabel` | y-axis label. |
 | | `xlim` | Optional `[min, max]` x-axis range. |
 | | `ylim` | Optional `[min, max]` y-axis range. |
-| | `rlim` | Optional `[min, max]` ratio panel y-axis range. |
-| | `ratio` | Optional ratio panel mode (`"data"` or `"null"`). |
-| | `scale-by-width` | Optional bin-width scaling (`"forward"`, `"backward"`, or `"null"`). |
+| | `scale-by-width` | Optional bin-width scaling (`"forward"`, `"backward"`, or `"null"`). Histogram only. |
+| | `ratio` | Optional ratio panel mode (`"data"` or `"null"`). Histogram only. |
+| | `rlim` | Optional `[min, max]` ratio panel y-axis range. Histogram only. |
+| | `tags` | List of systematic tag names to plot. Uncertainty only. |
 | | `watermark` | Optional watermark string (default: `"$\bf{SBN}$ Internal"`). |
 
 ### `style`

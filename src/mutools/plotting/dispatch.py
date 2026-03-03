@@ -7,12 +7,13 @@ from typing import Union
 
 import toml
 
-from .profit import ProfitPlotData, histogram
+from .profit import ProfitPlotData, histogram, uncertainty
 
 # Map of plot type strings to their handler functions. New plot types
 # can be registered here as the module grows.
 _HANDLERS = {
     "histogram": histogram,
+    "uncertainty": uncertainty,
 }
 
 
@@ -73,19 +74,29 @@ def run(config: Union[dict, str, Path]) -> None:
         data = ProfitPlotData(source, plot.get("scale-by-width", "null"))
 
         for detector in plot["detectors"]:
+            # Common kwargs shared across all plot types.
             kwargs = {
                 **base,
-                "variable": plot["variable"],
                 "detector": detector,
                 "detector_label": general["detectors"][detector],
                 "xlabel": plot["xlabel"],
-                "ylabel": plot["ylabel"],
                 "xlim": plot.get("xlim"),
                 "ylim": plot.get("ylim"),
-                "ratio": plot.get("ratio"),
-                "rlim": plot.get("rlim"),
             }
             if "watermark" in plot:
                 kwargs["watermark"] = plot["watermark"]
+
+            # Type-specific kwargs.
+            if plot_type == "histogram":
+                kwargs.update(
+                    {
+                        "variable": plot["variable"],
+                        "ylabel": plot["ylabel"],
+                        "ratio": plot.get("ratio"),
+                        "rlim": plot.get("rlim"),
+                    }
+                )
+            elif plot_type == "uncertainty":
+                kwargs["tags"] = plot["tags"]
 
             handler(data, **kwargs)

@@ -535,3 +535,80 @@ def histogram(
     if output is not None:
         figname = f"hist_{detector}_{variable}_{code_version}.png"
         figure.savefig(output / figname)
+
+
+def uncertainty(
+    data: ProfitPlotData,
+    *,
+    detector: int,
+    tags: list,
+    xlabel: str,
+    code_version: str,
+    selection_version: str,
+    xlim: Optional[Tuple[float, float]] = None,
+    ylim: Optional[Tuple[float, float]] = None,
+    **kwargs,
+) -> None:
+    """
+    Create a step plot of the fractional systematic uncertainties for
+    a set of tags (groups of systematics) from a ProfitPlotData object.
+
+    Parameters
+    ----------
+    data : ProfitPlotData
+        The data object containing the fractional systematic traces.
+    detector : int
+        The detector number corresponding to the internal numbering
+        within the PROfit configuration.
+    tags : list[str]
+        The systematic tags to plot, each corresponding to a named
+        group of systematics in the data object.
+    xlabel : str
+        The label for the x-axis of the plot.
+    code_version : str
+        The version of the code used to generate the plot, to be
+        included in the legend for metadata purposes.
+    selection_version : str
+        The version of the selection used to generate the plot, to be
+        included in the legend for metadata purposes.
+    xlim : Optional[tuple[float, float]]
+        The limits for the x-axis of the plot.
+    ylim : Optional[tuple[float, float]]
+        The limits for the y-axis of the plot.
+
+    Returns
+    -------
+    None.
+    """
+    figure = plt.figure(figsize=(8, 6))
+    ax = figure.add_subplot()
+
+    for tag in tags:
+        name = f"0:{detector}:0:{tag}:SUM"
+        trace = data.get_trace(name, TraceType.FRAC_SYST)
+
+        # The trace shape is (N, 4): bin_center, bin_low_edge,
+        # bin_high_edge, value. We append the last bin's right edge and
+        # repeat the last value to close the step correctly.
+        ax.step(
+            np.concatenate([trace[:, 1], trace[-1:, 2]]),
+            np.concatenate([trace[:, 3], trace[:, 3][-1:]]),
+            where="post",
+            label=tag,
+        )
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Fractional Systematic Uncertainty")
+    if xlim is not None:
+        ax.set_xlim(*xlim)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+
+    h, _ = ax.get_legend_handles_labels()
+    meta_patch = construct_meta_handle(code_version, selection_version)
+    legend = ax.legend(handles=h + [meta_patch])
+    texts = legend.get_texts()
+    texts[-1].set_fontsize(8)
+    texts[-1].set_alpha(0.6)
+
+    mark_axis(ax, r"$\bf{SBN}$ Internal", hadj=0.035)

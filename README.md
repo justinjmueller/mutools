@@ -25,10 +25,12 @@ uv sync --group dev
 
 ## Using `pip`
 
-Clone the repository and install in editable mode:
+Clone the repository, create a virtual environment, and install in editable mode:
 
 ```bash
 git clone <repo-url>
 cd mutools
+python -m venv .venv
+source .venv/bin/activate
 pip install -e .
 ```

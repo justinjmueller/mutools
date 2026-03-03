@@ -1,0 +1,57 @@
+## FONT
+mathtext.fontset: cm #dejavuserif
+mathtext.default: regular
+font.family: serif
+font.serif: DejaVu Serif, Times New Roman
+
+## FIGURE
+figure.titlesize: 36
+figure.constrained_layout.use: True
+figure.facecolor: white
+
+## AXES
+axes.linewidth: 1.0
+axes.labelsize: xx-large
+axes.titlesize: 36
+axes.titlepad: 28
+
+## PATCHES
+patch.linewidth: 1.5
+patch.edgecolor: black
+patch.force_edgecolor: True
+
+## TICKS
+xtick.top: True
+xtick.bottom: True
+xtick.direction: in
+xtick.minor.visible: True
+xtick.major.size: 10
+xtick.minor.size: 5
+xtick.labelsize: x-large
+
+ytick.left: True
+ytick.right: True
+ytick.direction: in
+ytick.minor.visible: True
+ytick.major.size: 10
+ytick.minor.size: 5
+ytick.labelsize: x-large
+
+## GRID
+grid.color: b2b2b2
+grid.linestyle: --
+grid.linewidth: 0.5
+
+## LEGEND
+legend.fontsize: 12
+legend.frameon: False
+
+## LINES
+lines.linewidth: 2
+
+## COLORS
+axes.prop_cycle: cycler('color', ['D55E00', 'E69F00', '009E73', '0072B2', 'CC79A7', '56B4E9', 'F0E442', '000000'])
+
+## OTHER
+image.cmap: Blues
+savefig.facecolor: white

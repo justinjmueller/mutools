@@ -50,6 +50,8 @@ def run(config: Union[dict, str, Path]) -> None:
 
     general = plots["general"]
     source = Path(general["input"])
+    if general.get("savefig", False) and not general.get("output"):
+        raise ValueError("Output path must be specified if savefig is True.")
     output = Path(general["output"]) if general.get("savefig", False) else None
 
     # Shared keyword arguments that apply to every plot.

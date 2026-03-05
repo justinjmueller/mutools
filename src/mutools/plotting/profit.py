@@ -547,6 +547,7 @@ def uncertainty(
     selection_version: str,
     xlim: Optional[Tuple[float, float]] = None,
     ylim: Optional[Tuple[float, float]] = None,
+    watermark: Optional[str] = r"$\bf{SBN}$ Internal",
     **kwargs,
 ) -> None:
     """
@@ -575,6 +576,8 @@ def uncertainty(
         The limits for the x-axis of the plot.
     ylim : Optional[tuple[float, float]]
         The limits for the y-axis of the plot.
+    watermark : Optional[str]
+        The watermark label placed above the axis.
 
     Returns
     -------
@@ -611,4 +614,4 @@ def uncertainty(
     texts[-1].set_fontsize(8)
     texts[-1].set_alpha(0.6)
 
-    mark_axis(ax, r"$\bf{SBN}$ Internal", hadj=0.035)
+    mark_axis(ax, watermark, hadj=0.035)

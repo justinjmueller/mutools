@@ -47,10 +47,10 @@ TOML-driven dispatcher that reads a configuration and executes all defined plots
 | | `subchannels` | Ordered list of subchannel names. |
 | | `detectors` | List of detector label strings (indexed by detector number). |
 | `[[plot]]` | `type` | Plot type — `"histogram"` or `"uncertainty"`. |
-| | `variable` | Variable index within the PROfit configuration. |
+| | `variable` | Variable index within the PROfit configuration. Histogram only. |
 | | `detectors` | List of detector indices to plot. |
 | | `xlabel` | x-axis label. |
-| | `ylabel` | y-axis label. |
+| | `ylabel` | y-axis label. Histogram only. |
 | | `xlim` | Optional `[min, max]` x-axis range. |
 | | `ylim` | Optional `[min, max]` y-axis range. |
 | | `scale-by-width` | Optional bin-width scaling (`"forward"`, `"backward"`, or `"null"`). Histogram only. |

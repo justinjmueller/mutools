@@ -30,7 +30,7 @@ Utilities for loading and aggregating SPINE training/validation log files (CSV f
 
 ```python
 from pathlib import Path
-from mutools.io.spine import load_logs
+from mutools.io import load_logs
 
 # Concatenate all training logs
 df = load_logs(Path("logs/"), method="concat")

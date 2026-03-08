@@ -9,3 +9,6 @@ __pycache__/
 # UV environment
 .venv/
 uv.lock
+
+# VSCode settings
+.vscode/

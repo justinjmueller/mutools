@@ -48,6 +48,7 @@ TOML-driven dispatcher that reads a configuration and executes all defined plots
 | | `subchannels` | Ordered list of subchannel names. |
 | | `detectors` | List of detector label strings (indexed by detector number). |
 | | `counter_index` | Optional variable index for the raw event counter. When set, candidate counts are appended to subchannel legend labels. |
+| `[[plot]]` | `counter_fmt` | Python format spec for count display. Float spec (e.g. `".0f"`, `".1f"`) shows raw counts; percent spec (e.g. `".1%"`) shows fraction of total. Default: `".0f"`. Histogram only. |
 | `[[plot]]` | `type` | Plot type — `"histogram"` or `"uncertainty"`. |
 | | `variable` | Variable index within the PROfit configuration. Histogram only. |
 | | `detectors` | List of detector indices to plot. |

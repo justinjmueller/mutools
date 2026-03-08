@@ -97,6 +97,7 @@ def run(config: Union[dict, str, Path]) -> None:
                         "ylabel": plot["ylabel"],
                         "ratio": plot.get("ratio"),
                         "rlim": plot.get("rlim"),
+                        "counter_fmt": plot.get("counter_fmt", ".0f"),
                     }
                 )
             elif plot_type == "uncertainty":

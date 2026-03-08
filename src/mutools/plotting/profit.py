@@ -348,6 +348,7 @@ def histogram(
     rlim: Optional[Tuple[float, float]] = None,
     ratio: Optional[str] = None,
     counter_index: Optional[int] = None,
+    counter_fmt: str = ".0f",
     detector_label: Optional[str] = None,
     watermark: Optional[str] = r"$\bf{SBN}$ Internal",
     output: Optional[Path] = None,
@@ -395,6 +396,11 @@ def histogram(
         The variable index of the raw event counter. When provided,
         per-subchannel candidate counts are appended to the legend
         labels (e.g. "CC QE (123)").
+    counter_fmt : str
+        Python format spec applied to the count value. Use a standard
+        float spec (e.g. ".0f", ".1f") for raw counts, or a percent
+        spec (e.g. ".1%", ".0%") to display the fraction of the total
+        instead. Default is ".0f".
     detector_label : Optional[str]
         An optional label for the detector, which can be used in the
         plot title or annotations.
@@ -456,8 +462,13 @@ def histogram(
     # reversing counts aligns each count with the correct visual entry.
     if counter_index is not None:
         counts = data.get_counts(counter_index, detector, len(subchannels))
-        for patch, count in zip(proxy_stack, counts[::-1]):
-            patch.set_label(f"{patch.get_label()} ({count:.0f})")
+        if counter_fmt.endswith("%"):
+            total = sum(counts)
+            values = [c / total for c in counts]
+        else:
+            values = counts
+        for patch, value in zip(proxy_stack, values[::-1]):
+            patch.set_label(f"{patch.get_label()} ({value:{counter_fmt}})")
 
     # Add an outline to the stacked histogram by plotting the
     # cumulative values of the stack as step lines on top of the

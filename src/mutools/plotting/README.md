@@ -78,7 +78,7 @@ Style sheets live in [`styles/`](styles/) and can be added by dropping a new `.m
 
 | Name | Description |
 |---|---|
-| `default` | Clean axes (no top/right spines), y-axis grid, consistent font sizes. |
+| `rootlike` | Serif font (DejaVu Serif / Times New Roman), inward-facing ticks on all four sides with minor ticks, colorblind-friendly color cycle, no legend frame. Mimics the classic ROOT aesthetic. |
 
 ## Usage
 
@@ -87,7 +87,7 @@ Style sheets live in [`styles/`](styles/) and can be added by dropping a new `.m
 ```python
 from mutools.plotting import run, use_style
 
-use_style("default")
+use_style("rootlike")
 run("plots.toml")            # from a file
 run(cfg_string)              # from a TOML string
 run(toml.loads(cfg_string))  # from a pre-parsed dict
@@ -99,7 +99,7 @@ run(toml.loads(cfg_string))  # from a pre-parsed dict
 from mutools.plotting import use_style
 from mutools.plotting.profit import ProfitPlotData, histogram
 
-use_style("default")
+use_style("rootlike")
 
 data = ProfitPlotData("profit_output.root")
 histogram(data, variable=0, detector=0, ...)

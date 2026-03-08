@@ -97,6 +97,7 @@ def run(config: Union[dict, str, Path]) -> None:
                         "ylabel": plot["ylabel"],
                         "ratio": plot.get("ratio"),
                         "rlim": plot.get("rlim"),
+                        "disable_systematics": plot.get("disable_systematics", False),
                         "counter_fmt": plot.get("counter_fmt", ".0f"),
                     }
                 )

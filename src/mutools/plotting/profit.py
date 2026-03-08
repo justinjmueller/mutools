@@ -347,6 +347,7 @@ def histogram(
     ylim: Optional[Tuple[float, float]] = None,
     rlim: Optional[Tuple[float, float]] = None,
     ratio: Optional[str] = None,
+    disable_systematics: bool = False,
     counter_index: Optional[int] = None,
     counter_fmt: str = ".0f",
     detector_label: Optional[str] = None,
@@ -392,6 +393,10 @@ def histogram(
         plot. Some options:
         - 'data' to display the ratio of the total histogram to data
         - 'null' to display the ratio of the total histogram to itself
+    disable_systematics : bool
+        If True, the error band for the total histogram will not be
+        displayed, which can be useful for debugging or when the
+        systematic uncertainties are not relevant for the plot.
     counter_index : Optional[int]
         The variable index of the raw event counter. When provided,
         per-subchannel candidate counts are appended to the legend
@@ -479,8 +484,8 @@ def histogram(
     # values and uncertainties from the band trace. We also capture
     # the Patch object returned by the add_error_band function so that
     # we can include it in the legend.
-    band_patch = add_error_band(ax, edges, band[:, 1], yerr=[band[:, 2], band[:, 3]])
-
+    if not disable_systematics:
+        band_patch = add_error_band(ax, edges, band[:, 1], yerr=[band[:, 2], band[:, 3]])
     # Construct a Patch for the legend that represents the metadata
     # about the plot, such as the PROfit version and selection version,
     # and include this in the legend along with the proxy stack and the
@@ -490,7 +495,8 @@ def histogram(
 
     # Add the legend for the stacked histogram and the error band using
     # the proxy stack and the band patch.
-    legend = ax.legend(handles=proxy_stack + [band_patch, meta_patch])
+    ext = [band_patch] if not disable_systematics else []
+    legend = ax.legend(handles=proxy_stack + ext + [meta_patch])
 
     if detector_label is not None:
         legend.set_title(detector_label)

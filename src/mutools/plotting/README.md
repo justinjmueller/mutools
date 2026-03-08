@@ -59,6 +59,7 @@ TOML-driven dispatcher that reads a configuration and executes all defined plots
 | | `scale-by-width` | Optional bin-width scaling (`"forward"`, `"backward"`, or `"null"`). Histogram only. |
 | | `ratio` | Optional ratio panel mode (`"data"` or `"null"`). Histogram only. |
 | | `rlim` | Optional `[min, max]` ratio panel y-axis range. Histogram only. |
+| | `disable_systematics` | Boolean — if `true`, the error band is hidden. Default: `false`. Histogram only. |
 | | `tags` | List of systematic tag names to plot. Uncertainty only. |
 | | `watermark` | Optional watermark string (default: `"$\bf{SBN}$ Internal"`). |
 

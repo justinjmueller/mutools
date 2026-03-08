@@ -19,6 +19,7 @@ Tools for reading and visualizing data from [PROfit](https://github.com/ubneutri
 | Symbol | Description |
 |---|---|
 | `ProfitPlotData` | Reads a PROfit ROOT file and organizes histogram contents, error bands, and fractional systematics into named traces. |
+| `ProfitPlotData.get_counts(variable, detector, n_subchannels)` | Returns a list of total event counts per subchannel for the given variable and detector. |
 | `TraceType` | Enum identifying the three trace types: `HIST_CONTENTS`, `HIST_ERROR_BAND`, `FRAC_SYST`. |
 | `histogram(data, ...)` | High-level function that produces a stacked histogram with an error band and an optional ratio panel. |
 | `uncertainty(data, ...)` | Step plot of fractional systematic uncertainties for a set of named systematic tags. |
@@ -46,6 +47,7 @@ TOML-driven dispatcher that reads a configuration and executes all defined plots
 | | `selection_version` | Version string included in legend metadata. |
 | | `subchannels` | Ordered list of subchannel names. |
 | | `detectors` | List of detector label strings (indexed by detector number). |
+| | `counter_index` | Optional variable index for the raw event counter. When set, candidate counts are appended to subchannel legend labels. |
 | `[[plot]]` | `type` | Plot type — `"histogram"` or `"uncertainty"`. |
 | | `variable` | Variable index within the PROfit configuration. Histogram only. |
 | | `detectors` | List of detector indices to plot. |

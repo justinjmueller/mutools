@@ -60,6 +60,7 @@ def run(config: Union[dict, str, Path]) -> None:
         "selection_version": general["selection_version"],
         "subchannels": general["subchannels"],
         "output": output,
+        "counter_index": general.get("counter_index"),
     }
 
     for plot in plots["plot"]:

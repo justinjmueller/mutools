@@ -135,6 +135,33 @@ class ProfitPlotData:
             raw = group[deserialize].to_numpy()
             self._data[TraceType.FRAC_SYST][name] = raw
 
+    def get_counts(self, variable: int, detector: int, n_subchannels: int) -> list:
+        """
+        Compute the total event count for each subchannel by summing bin
+        contents from the histogram trace of the specified variable.
+
+        Parameters
+        ----------
+        variable : int
+            The variable index to use for the count (typically a raw
+            event counter variable from the PROfit configuration).
+        detector : int
+            The detector index.
+        n_subchannels : int
+            The number of subchannels.
+
+        Returns
+        -------
+        list[float]
+            Total counts for each subchannel, in subchannel order.
+        """
+        return [
+            self.get_trace(
+                f"{variable}:0:{detector}:0:{si}:CV", TraceType.HIST_CONTENTS
+            )[:, 3].sum()
+            for si in range(n_subchannels)
+        ]
+
     def get_trace(self, name: str, trace_type: TraceType):
         """
         Retrieves a specific trace from the data based on the provided
@@ -320,6 +347,7 @@ def histogram(
     ylim: Optional[Tuple[float, float]] = None,
     rlim: Optional[Tuple[float, float]] = None,
     ratio: Optional[str] = None,
+    counter_index: Optional[int] = None,
     detector_label: Optional[str] = None,
     watermark: Optional[str] = r"$\bf{SBN}$ Internal",
     output: Optional[Path] = None,
@@ -363,6 +391,10 @@ def histogram(
         plot. Some options:
         - 'data' to display the ratio of the total histogram to data
         - 'null' to display the ratio of the total histogram to itself
+    counter_index : Optional[int]
+        The variable index of the raw event counter. When provided,
+        per-subchannel candidate counts are appended to the legend
+        labels (e.g. "CC QE (123)").
     detector_label : Optional[str]
         An optional label for the detector, which can be used in the
         plot title or annotations.
@@ -416,6 +448,16 @@ def histogram(
         alpha=0.7,
     )
     proxy_stack = construct_proxy_stack(subchannels)[::-1]
+
+    # If a counter variable is provided, append the per-subchannel
+    # candidate counts to the legend labels. construct_proxy_stack
+    # assigns colors in reversed subchannel order, so proxy_stack[0]
+    # visually corresponds to the last subchannel in the stack;
+    # reversing counts aligns each count with the correct visual entry.
+    if counter_index is not None:
+        counts = data.get_counts(counter_index, detector, len(subchannels))
+        for patch, count in zip(proxy_stack, counts[::-1]):
+            patch.set_label(f"{patch.get_label()} ({count:.0f})")
 
     # Add an outline to the stacked histogram by plotting the
     # cumulative values of the stack as step lines on top of the

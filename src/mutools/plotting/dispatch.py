@@ -38,13 +38,19 @@ def run(config: Union[dict, str, Path]) -> None:
     ValueError
         If a ``[[plot]]`` entry specifies an unsupported ``type``.
     """
-    if isinstance(config, (str, Path)):
-        path = Path(config)
-        if path.exists():
+    if isinstance(config, Path):
+        with open(config) as f:
+            plots = toml.load(f)
+    elif isinstance(config, str):
+        # Treat as a file path only when the string looks like one (no
+        # newlines).  Passing a multi-line TOML string to Path() can raise
+        # OSError: [Errno 63] File name too long on some platforms.
+        path = Path(config) if "\n" not in config else None
+        if path is not None and path.exists():
             with open(path) as f:
                 plots = toml.load(f)
         else:
-            plots = toml.loads(str(config))
+            plots = toml.loads(config)
     else:
         plots = config
 

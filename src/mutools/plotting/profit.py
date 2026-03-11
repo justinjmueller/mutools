@@ -38,7 +38,7 @@ class ProfitPlotData:
         The path to the ROOT file containing the PROfit plot data.
     """
 
-    def __init__(self, file_path, scale_by_width: str = "null"):
+    def __init__(self, file_path, scale_by_width: bool = False):
         """
         Initializes the ProfitPlotData object by reading the data from
         the specified ROOT file and organizing it into traces and
@@ -48,14 +48,15 @@ class ProfitPlotData:
         ----------
         file_path : str
             The path to the ROOT file containing the PROfit plot data.
-        scale_by_width : str, optional
-            Whether to scale the histogram contents by the bin width.
-            Default is 'null', which means apply no scaling. If set to
-            'forward', the histogram contents will be scaled by the bin
-            width, whereas 'backward' will apply the inverse scaling.
+        scale_by_width : bool, optional
+            Whether the upstream data has been scaled by bin width
+            (i.e. stored as density). Default is False. If True, the
+            file data is stored as-is for display and raw event counts
+            are recovered by multiplying by the bin width.
         """
         self._file_path = file_path
         self._scale_by_width = scale_by_width
+        self._raw_data = dict()
         self._data = dict()
 
         # Read the full set of data into a single DataFrame. We can
@@ -75,64 +76,56 @@ class ProfitPlotData:
         # addition to the "total" histogram.
         data = pd.DataFrame(self._rf["hist1d"].arrays(library="np"))
         data = data.drop_duplicates()
+        self._raw_data[TraceType.HIST_CONTENTS] = dict()
         self._data[TraceType.HIST_CONTENTS] = dict()
         deserialize = ["bin_center", "bin_low_edge", "bin_high_edge", "bin_content"]
         for k, group in data.groupby(cols):
             name = f"{k[0]}:{k[1]}:{k[2]}:{k[3]}:{k[4]}:{k[5]}"
             raw = group[deserialize].to_numpy().copy()
-
-            # Handle scaling of the histogram contents by the bin width
-            if self._scale_by_width != "null":
-                widths = raw[:, 2] - raw[:, 1]
-                if self._scale_by_width == "forward":
-                    raw[:, 3] /= widths
-                elif self._scale_by_width == "backward":
-                    raw[:, 3] *= widths
-
             self._data[TraceType.HIST_CONTENTS][name] = raw
+
+            if self._scale_by_width:
+                counts = raw.copy()
+                widths = counts[:, 2] - counts[:, 1]
+                counts[:, 3] *= widths
+                self._raw_data[TraceType.HIST_CONTENTS][name] = counts
+            else:
+                self._raw_data[TraceType.HIST_CONTENTS][name] = raw
 
         # Filter to the "errorband" tag, which contains the error band
         # information. This content is only available for the "total"
         # histogram, so we can just grab this directly.
         data = pd.DataFrame(self._rf["errorband"].arrays(library="np"))
+        self._raw_data[TraceType.HIST_ERROR_BAND] = dict()
         self._data[TraceType.HIST_ERROR_BAND] = dict()
         deserialize = ["x_value", "y_value", "error_y_low", "error_y_high"]
         for k, group in data.groupby(cols):
             name = f"{k[0]}:{k[1]}:{k[2]}:{k[3]}:{k[4]}:{k[5]}"
             raw = group[deserialize].to_numpy()
-
-            # Handle scaling of the error band by the bin width, which
-            # should be consistent with the scaling applied to the
-            # histogram contents. This is a bit more complicated than
-            # the scaling of the histogram contents because the error
-            # band data does not have the bin edges, so we need to
-            # retrieve the corresponding histogram contents trace to
-            # calculate the bin widths from the bin centers.
-            if self._scale_by_width != "null":
-                raw = raw.copy()
-                tmptrace = self.get_trace(name, TraceType.HIST_CONTENTS)
-                widths = tmptrace[:, 2] - tmptrace[:, 1]
-                if self._scale_by_width == "forward":
-                    raw[:, 1] /= widths
-                    raw[:, 2] /= widths
-                    raw[:, 3] /= widths
-                elif self._scale_by_width == "backward":
-                    raw[:, 1] *= widths
-                    raw[:, 2] *= widths
-                    raw[:, 3] *= widths
-
             self._data[TraceType.HIST_ERROR_BAND][name] = raw
 
-        # mode, detector, channel, tag, systname, bin_index, bin_center, bin_low_edge, bin_content
+            if self._scale_by_width:
+                counts = raw.copy()
+                tmptrace = self._data[TraceType.HIST_CONTENTS][name]
+                widths = tmptrace[:, 2] - tmptrace[:, 1]
+                counts[:, 1] *= widths
+                counts[:, 2] *= widths
+                counts[:, 3] *= widths
+                self._raw_data[TraceType.HIST_ERROR_BAND][name] = counts
+            else:
+                self._raw_data[TraceType.HIST_ERROR_BAND][name] = raw
+
         # Filter to the "frac_syst" tag, which contains the fractional
         # systematic uncertainties.
         data = pd.DataFrame(self._rf["frac_syst"].arrays(library="np"))
+        self._raw_data[TraceType.FRAC_SYST] = dict()
         self._data[TraceType.FRAC_SYST] = dict()
         deserialize = ["bin_center", "bin_low_edge", "bin_high_edge", "bin_content"]
         cols = ["mode", "detector", "channel", "tag", "systname"]
         for k, group in data.groupby(cols):
             name = f"{k[0]}:{k[1]}:{k[2]}:{k[3]}:{k[4]}"
             raw = group[deserialize].to_numpy()
+            self._raw_data[TraceType.FRAC_SYST][name] = raw
             self._data[TraceType.FRAC_SYST][name] = raw
 
     def get_counts(self, variable: int, detector: int, n_subchannels: int) -> list:
@@ -157,12 +150,12 @@ class ProfitPlotData:
         """
         return [
             self.get_trace(
-                f"{variable}:0:{detector}:0:{si}:CV", TraceType.HIST_CONTENTS
+                f"{variable}:0:{detector}:0:{si}:CV", TraceType.HIST_CONTENTS, scaled=False
             )[:, 3].sum()
             for si in range(n_subchannels)
         ]
 
-    def get_trace(self, name: str, trace_type: TraceType):
+    def get_trace(self, name: str, trace_type: TraceType, scaled: bool = True):
         """
         Retrieves a specific trace from the data based on the provided
         name and trace type.
@@ -173,6 +166,10 @@ class ProfitPlotData:
             The name of the trace to retrieve.
         trace_type : TraceType
             The type of trace to retrieve.
+        scaled : bool, optional
+            If True (default), return the scaled data. If False, return
+            the raw unscaled data. When scale_by_width is disabled on
+            the ProfitPlotData object, both return the same arrays.
 
         Returns
         -------
@@ -180,7 +177,8 @@ class ProfitPlotData:
             The requested trace data.
         """
         name = name.replace("total", "4294967295")
-        return self._data[trace_type][name]
+        store = self._data if scaled else self._raw_data
+        return store[trace_type][name]
 
 
 def add_error_band(
@@ -350,6 +348,7 @@ def histogram(
     disable_systematics: bool = False,
     counter_index: Optional[int] = None,
     counter_fmt: str = ".0f",
+    scale_by_width: bool = False,
     detector_label: Optional[str] = None,
     watermark: Optional[str] = r"$\bf{SBN}$ Internal",
     output: Optional[Path] = None,
@@ -406,6 +405,10 @@ def histogram(
         float spec (e.g. ".0f", ".1f") for raw counts, or a percent
         spec (e.g. ".1%", ".0%") to display the fraction of the total
         instead. Default is ".0f".
+    scale_by_width : bool
+        If True, retrieve scaled traces (divided by bin width) for
+        display. Raw unscaled traces are always used for statistical
+        uncertainty calculations. Default is False.
     detector_label : Optional[str]
         An optional label for the detector, which can be used in the
         plot title or annotations.
@@ -440,10 +443,10 @@ def histogram(
     # the bin edges from the first trace, assuming all traces share the
     # same binning.
     traces = [
-        data.get_trace(f"{variable}:0:{detector}:0:{si}:CV", TraceType.HIST_CONTENTS)
+        data.get_trace(f"{variable}:0:{detector}:0:{si}:CV", TraceType.HIST_CONTENTS, scaled=scale_by_width)
         for si in range(len(subchannels))
     ]
-    band = data.get_trace(f"{variable}:0:{detector}:0:total:CV", TraceType.HIST_ERROR_BAND)
+    band = data.get_trace(f"{variable}:0:{detector}:0:total:CV", TraceType.HIST_ERROR_BAND, scaled=scale_by_width)
     edges = np.concatenate([np.array([traces[0][0, 1]]), traces[0][:, 2]])
 
     # Plot the stacked histogram for the subchannels using the bin
@@ -543,10 +546,10 @@ def histogram(
 
         if ratio == "data":
             data_trace = data.get_trace(
-                f"{variable}:0:{detector}:0:total:DATA", TraceType.HIST_CONTENTS
+                f"{variable}:0:{detector}:0:total:DATA", TraceType.HIST_CONTENTS, scaled=scale_by_width
             )
             data_band = data.get_trace(
-                f"{variable}:0:{detector}:0:total:DATA", TraceType.HIST_ERROR_BAND
+                f"{variable}:0:{detector}:0:total:DATA", TraceType.HIST_ERROR_BAND, scaled=scale_by_width
             )
             y = data_band[:, 1] / data_trace[:, 3]
             ylo = data_band[:, 2] / data_trace[:, 3]
@@ -554,8 +557,16 @@ def histogram(
 
         elif ratio == "null":
             y = np.ones_like(band[:, 1])
-            ylo = np.zeros_like(band[:, 1])
-            yhi = np.zeros_like(band[:, 1])
+            #ylo = np.zeros_like(band[:, 1])
+            #yhi = np.zeros_like(band[:, 1])
+            # Get the raw total histogram trace to calculate the statistical
+            # uncertainties. Raw (unscaled) counts are required so that
+            # sqrt(N)/N correctly represents the Poisson relative error.
+            total_trace = data.get_trace(
+                f"{variable}:0:{detector}:0:total:CV", TraceType.HIST_CONTENTS, scaled=False
+            )
+            ylo = np.sqrt(total_trace[:, 3]) / total_trace[:, 3]
+            yhi = np.sqrt(total_trace[:, 3]) / total_trace[:, 3]
 
         else:
             raise ValueError(f"Unsupported ratio option: {ratio!r}")

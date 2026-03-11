@@ -54,6 +54,9 @@ def run(config: Union[dict, str, Path]) -> None:
         raise ValueError("Output path must be specified if savefig is True.")
     output = Path(general["output"]) if general.get("savefig", False) else None
 
+    general_sbw = general.get("scale_by_width", "disabled") == "enabled"
+    data = ProfitPlotData(source, general_sbw)
+
     # Shared keyword arguments that apply to every plot.
     base = {
         "code_version": general["code_version"],
@@ -71,10 +74,6 @@ def run(config: Union[dict, str, Path]) -> None:
             )
 
         handler = _HANDLERS[plot_type]
-
-        # ProfitPlotData is instantiated once per plot entry since
-        # scale-by-width is a per-plot setting shared across detectors.
-        data = ProfitPlotData(source, plot.get("scale-by-width", "null"))
 
         for detector in plot["detectors"]:
             # Common kwargs shared across all plot types.
@@ -99,6 +98,7 @@ def run(config: Union[dict, str, Path]) -> None:
                         "rlim": plot.get("rlim"),
                         "disable_systematics": plot.get("disable_systematics", False),
                         "counter_fmt": plot.get("counter_fmt", ".0f"),
+                        "scale_by_width": plot.get("scale_by_width", "disabled") == "enabled",
                     }
                 )
             elif plot_type == "uncertainty":

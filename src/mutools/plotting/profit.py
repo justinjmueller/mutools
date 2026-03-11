@@ -603,6 +603,14 @@ def histogram(
     # index, and code version to construct the filename, which provides
     # useful information about the content and provenance of the plot.
     if output is not None:
+        # Ensure the output directory exists before trying to save the
+        # figure.
+        output.mkdir(parents=True, exist_ok=True)
+
+        # Construct the filename using the detector name, variable
+        # index, and code version. This naming convention helps to keep
+        # the files organized and makes it easier to identify the
+        # content of each plot based on its filename.
         figname = f"hist_{detector}_{variable}_{code_version}.png"
         figure.savefig(output / figname)
 

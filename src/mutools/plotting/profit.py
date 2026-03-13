@@ -336,6 +336,7 @@ def histogram(
     *,
     variable: int,
     detector: int,
+    channel: int,
     xlabel: str,
     ylabel: str,
     code_version: str,
@@ -367,6 +368,9 @@ def histogram(
         within the PROfit configuration.
     detector : int
         The detector number corresponding to the internal numbering
+        within the PROfit configuration.
+    channel : int
+        The channel number corresponding to the internal numbering
         within the PROfit configuration.
     xlabel : str
         The label for the x-axis of the plot.
@@ -437,16 +441,14 @@ def histogram(
         ax.tick_params(axis="x", which="both", labelbottom=False)
         ax.set_xlabel("")
 
-    # Get the traces for each subchannel and the total band from the
-    # data object using the appropriate naming convention for the
-    # subchannel traces and the total histogram band. We also calculate
-    # the bin edges from the first trace, assuming all traces share the
-    # same binning.
+    # Get the traces for each subchannel from the data object using the
+    # appropriate naming convention for the subchannel traces. We also 
+    # calculate the bin edges from the first trace, assuming all traces 
+    # share the same binning (they should).
     traces = [
-        data.get_trace(f"{variable}:0:{detector}:0:{si}:CV", TraceType.HIST_CONTENTS, scaled=scale_by_width)
+        data.get_trace(f"{variable}:0:{detector}:{channel}:{si}:CV", TraceType.HIST_CONTENTS, scaled=scale_by_width)
         for si in range(len(subchannels))
     ]
-    band = data.get_trace(f"{variable}:0:{detector}:0:total:CV", TraceType.HIST_ERROR_BAND, scaled=scale_by_width)
     edges = np.concatenate([np.array([traces[0][0, 1]]), traces[0][:, 2]])
 
     # Plot the stacked histogram for the subchannels using the bin
@@ -488,6 +490,7 @@ def histogram(
     # the Patch object returned by the add_error_band function so that
     # we can include it in the legend.
     if not disable_systematics:
+        band = data.get_trace(f"{variable}:0:{detector}:{channel}:total:CV", TraceType.HIST_ERROR_BAND, scaled=scale_by_width)
         band_patch = add_error_band(ax, edges, band[:, 1], yerr=[band[:, 2], band[:, 3]])
     # Construct a Patch for the legend that represents the metadata
     # about the plot, such as the PROfit version and selection version,
@@ -546,10 +549,10 @@ def histogram(
 
         if ratio == "data":
             data_trace = data.get_trace(
-                f"{variable}:0:{detector}:0:total:DATA", TraceType.HIST_CONTENTS, scaled=scale_by_width
+                f"{variable}:0:{detector}:{channel}:total:DATA", TraceType.HIST_CONTENTS, scaled=scale_by_width
             )
             data_band = data.get_trace(
-                f"{variable}:0:{detector}:0:total:DATA", TraceType.HIST_ERROR_BAND, scaled=scale_by_width
+                f"{variable}:0:{detector}:{channel}:total:DATA", TraceType.HIST_ERROR_BAND, scaled=scale_by_width
             )
             y = data_band[:, 1] / data_trace[:, 3]
             ylo = data_band[:, 2] / data_trace[:, 3]
@@ -557,13 +560,11 @@ def histogram(
 
         elif ratio == "null":
             y = np.ones_like(band[:, 1])
-            #ylo = np.zeros_like(band[:, 1])
-            #yhi = np.zeros_like(band[:, 1])
             # Get the raw total histogram trace to calculate the statistical
             # uncertainties. Raw (unscaled) counts are required so that
             # sqrt(N)/N correctly represents the Poisson relative error.
             total_trace = data.get_trace(
-                f"{variable}:0:{detector}:0:total:CV", TraceType.HIST_CONTENTS, scaled=False
+                f"{variable}:0:{detector}:{channel}:total:CV", TraceType.HIST_CONTENTS, scaled=False
             )
             ylo = np.sqrt(total_trace[:, 3]) / total_trace[:, 3]
             yhi = np.sqrt(total_trace[:, 3]) / total_trace[:, 3]
@@ -619,6 +620,7 @@ def uncertainty(
     data: ProfitPlotData,
     *,
     detector: int,
+    channel: int,
     tags: list,
     xlabel: str,
     code_version: str,
@@ -639,6 +641,9 @@ def uncertainty(
         The data object containing the fractional systematic traces.
     detector : int
         The detector number corresponding to the internal numbering
+        within the PROfit configuration.
+    channel : int
+        The channel number corresponding to the internal numbering
         within the PROfit configuration.
     tags : list[str]
         The systematic tags to plot, each corresponding to a named
@@ -669,7 +674,7 @@ def uncertainty(
     ax = figure.add_subplot()
 
     for tag in tags:
-        name = f"0:{detector}:0:{tag}:SUM"
+        name = f"0:{detector}:{channel}:{tag}:SUM"
         trace = data.get_trace(name, TraceType.FRAC_SYST)
 
         # The trace shape is (N, 4): bin_center, bin_low_edge,

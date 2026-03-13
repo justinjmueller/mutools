@@ -87,6 +87,7 @@ def run(config: Union[dict, str, Path]) -> None:
                 **base,
                 "detector": detector,
                 "detector_label": general["detectors"][detector],
+                "channel": plot.get("channel", 0),
                 "xlabel": plot["xlabel"],
                 "xlim": plot.get("xlim"),
                 "ylim": plot.get("ylim"),

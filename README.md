@@ -84,11 +84,11 @@ rings for the PRISM off-axis angle (OAA) bins.
 ```python
 from mutools.plotting import prism_schematic
 
-fig = prism_schematic()                                         # display in notebook
-fig = prism_schematic(n_bins=6, oaa_max=2.0)                   # uniform binning
+fig = prism_schematic()                                       # display in notebook
+fig = prism_schematic(n_bins=6, oaa_max=2.0)                  # uniform binning
 fig = prism_schematic(bin_edges=[0.0, 0.4, 0.9, 1.4, 1.7])    # explicit edges
-fig = prism_schematic(show_cathode=False)                       # hide cathode ring
-fig = prism_schematic(output="figures/")                        # save to figures/prism_schematic.pdf
+fig = prism_schematic(show_cathode=False)                     # hide cathode ring
+fig = prism_schematic(output="figures/")                      # save to figures/prism_schematic.pdf
 ```
 
 ## Styles

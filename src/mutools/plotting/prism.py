@@ -23,7 +23,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.colors import to_rgba
-from matplotlib.cm import ScalarMappable
+from matplotlib.lines import Line2D
 
 
 # ── Detector geometry ─────────────────────────────────────────────────────────
@@ -117,7 +117,6 @@ def _draw_detector(
     beam_x: float,
     beam_y: float,
     radii: list,
-    bin_edges: np.ndarray,
     colors: list,
     cathode_r: float,
     cathode_oaa: float,
@@ -138,7 +137,6 @@ def _draw_detector(
        visible above the TPC fill colour.
     4. Dotted cathode ring.
     5. Beam-axis cross-hair marker.
-    6. Text labels at the midpoint radius of each bin.
     """
     ax.set_facecolor("white")
     theta_arr = np.linspace(0, 2 * np.pi, 600)
@@ -197,32 +195,17 @@ def _draw_detector(
             label=f"Cathode ({cathode_oaa:.2f}°)",
         )
 
-    # 5. Beam-axis marker
-    ax.plot(beam_x, beam_y, "k+", ms=10, mew=2.0, zorder=8, label="Beam axis")
-
-    # 6. Bin labels placed at the midpoint radius along a fixed angle
-    label_angle = np.deg2rad(52)
-    for i in range(len(radii) - 1):
-        r_mid = 0.5 * (radii[i] + radii[i + 1])
-        lx = beam_x + r_mid * np.cos(label_angle)
-        ly = beam_y + r_mid * np.sin(label_angle)
-        if (xlim[0] < lx < xlim[1]) and (ylim[0] < ly < ylim[1]):
-            ax.text(
-                lx, ly,
-                f"Bin {i + 1}\n{bin_edges[i]:.2f}°–{bin_edges[i + 1]:.2f}°",
-                ha="center", va="center",
-                fontsize=6.5, color="k", zorder=9,
-                bbox=dict(fc="white", ec="none", alpha=0.6, pad=1),
-            )
+    # 5. Beam-axis marker (no label — listed in the shared side legend)
+    ax.plot(beam_x, beam_y, "k+", ms=10, mew=2.0, zorder=8)
 
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     ax.set_aspect("equal")
-    ax.set_xlabel("x [cm]", fontsize=11)
-    ax.set_ylabel("y [cm]", fontsize=11)
-    ax.set_title(title, fontsize=13, fontweight="bold", pad=8)
-    ax.legend(fontsize=8, loc="lower right", framealpha=0.85)
-    ax.tick_params(labelsize=9)
+    ax.set_xlabel("x [cm]")
+    ax.set_ylabel("y [cm]")
+    ax.set_title(title, fontsize=16, fontweight="bold", pad=8)
+    if show_cathode:
+        ax.legend(fontsize=8, loc="lower right", framealpha=0.85)
     ax.grid(True, lw=0.4, alpha=0.4)
 
 
@@ -301,49 +284,81 @@ def prism_schematic(
     half_y = 0.5 * (icar_y_hi - icar_y_lo) + pad
     half_span = max(half_x, half_y)
 
-    fig, axes = plt.subplots(1, 2, figsize=(13, 6.5))
-    fig.patch.set_facecolor("white")
+    # Both panels use an identical symmetric window so that SBND and
+    # ICARUS appear at their true relative sizes on the same scale.
+    shared_xlim = (-half_span, half_span)
+    shared_ylim = (-half_span, half_span)
+
+    # Three-column layout: SBND | ICARUS | narrow legend panel.
+    # Margins are set explicitly on the GridSpec so the axes fill the
+    # figure without relying on tight_layout.
+    fig = plt.figure(figsize=(15, 6.5))
+    gs = fig.add_gridspec(
+        1, 3,
+        width_ratios=[1, 1, 0.22],
+        wspace=0.05,
+        left=0.07,
+        right=0.98,
+        top=0.95,
+        bottom=0.05,
+    )
+    ax_sbnd = fig.add_subplot(gs[0])
+    ax_icar = fig.add_subplot(gs[1])
+    ax_leg  = fig.add_subplot(gs[2])
 
     _draw_detector(
-        axes[0], "SBND",
+        ax_sbnd, "SBND",
         SBND_TPC_CX, SBND_TPC_CY, SBND_TPC_DX, SBND_TPC_DY,
         SBND_BEAM_X, SBND_BEAM_Y,
-        sbnd_radii, bin_edges, bin_colors,
+        sbnd_radii, bin_colors,
         sbnd_cathode_r, sbnd_cathode_oaa,
-        xlim=_make_lim(SBND_BEAM_X, half_span),
-        ylim=_make_lim(sbnd_yc, half_span),
+        xlim=shared_xlim,
+        ylim=shared_ylim,
         show_cathode=show_cathode,
     )
     _draw_detector(
-        axes[1], "ICARUS",
+        ax_icar, "ICARUS",
         ICAR_TPC_CX, ICAR_TPC_CY, ICAR_TPC_DX, ICAR_TPC_DY,
         ICAR_BEAM_X, ICAR_BEAM_Y,
-        icar_radii, bin_edges, bin_colors,
+        icar_radii, bin_colors,
         icar_cathode_r, icar_cathode_oaa,
-        xlim=_make_lim(ICAR_BEAM_X, half_span),
-        ylim=_make_lim(icar_yc, half_span),
+        xlim=shared_xlim,
+        ylim=shared_ylim,
         show_cathode=show_cathode,
     )
 
-    sm = ScalarMappable(cmap=_CMAP, norm=plt.Normalize(oaa_min, oaa_max))
-    sm.set_array([])
-    cbar = fig.colorbar(
-        sm, ax=axes,
-        orientation="horizontal",
-        fraction=0.03, pad=0.12, aspect=40,
+    # Shared legend in the third panel: one entry per bin plus a beam-
+    # axis marker entry.  Patch style mirrors the filled annuli and
+    # dashed boundary circles.
+    bin_patches = [
+        patches.Patch(
+            facecolor=to_rgba(bin_colors[i], 0.4),
+            edgecolor=bin_colors[i],
+            linewidth=1.2,
+            linestyle="--",
+            label=f"Bin {i + 1}:  {bin_edges[i]:.2f}°–{bin_edges[i + 1]:.2f}°",
+        )
+        for i in range(n_bins)
+    ]
+    beam_handle = Line2D(
+        [0], [0], marker="+", color="k", ms=10, mew=2.0,
+        linestyle="none", label="Beam axis",
     )
-    cbar.set_label(r"$\theta_\mathrm{OAA}$ [degrees]", fontsize=11)
-    cbar.set_ticks(bin_edges)
-    cbar.set_ticklabels([f"{v:.2f}°" for v in bin_edges], fontsize=8)
-
-    fig.suptitle(
-        "PRISM Bins: Off-Axis Angle Rings on Detector Front Faces",
-        fontsize=14, fontweight="bold", y=1.01,
+    ax_leg.set_axis_off()
+    ax_leg.legend(
+        handles=bin_patches + [beam_handle],
+        loc="center left",
+        ncols=1,
+        fontsize=10,
+        framealpha=0.9,
+        title="PRISM bins",
+        title_fontsize=11,
+        labelspacing=0.8,
     )
 
     if output is not None:
         output = Path(output)
         output.mkdir(parents=True, exist_ok=True)
-        fig.savefig(output / "prism_schematic.pdf", bbox_inches="tight", dpi=200)
+        fig.savefig(output / "prism_schematic.pdf", dpi=200)
 
     return fig

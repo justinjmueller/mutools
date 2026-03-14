@@ -128,7 +128,7 @@ class ProfitPlotData:
             self._raw_data[TraceType.FRAC_SYST][name] = raw
             self._data[TraceType.FRAC_SYST][name] = raw
 
-    def get_counts(self, variable: int, detector: int, n_subchannels: int) -> list:
+    def get_counts(self, variable: int, detector: int, channel: int, n_subchannels: int) -> list:
         """
         Compute the total event count for each subchannel by summing bin
         contents from the histogram trace of the specified variable.
@@ -140,6 +140,8 @@ class ProfitPlotData:
             event counter variable from the PROfit configuration).
         detector : int
             The detector index.
+        channel : int
+            The channel index.
         n_subchannels : int
             The number of subchannels.
 
@@ -150,7 +152,7 @@ class ProfitPlotData:
         """
         return [
             self.get_trace(
-                f"{variable}:0:{detector}:0:{si}:CV", TraceType.HIST_CONTENTS, scaled=False
+                f"{variable}:0:{detector}:{channel}:{si}:CV", TraceType.HIST_CONTENTS, scaled=False
             )[:, 3].sum()
             for si in range(n_subchannels)
         ]
@@ -471,7 +473,7 @@ def histogram(
     # visually corresponds to the last subchannel in the stack;
     # reversing counts aligns each count with the correct visual entry.
     if counter_index is not None:
-        counts = data.get_counts(counter_index, detector, len(subchannels))
+        counts = data.get_counts(counter_index, detector, channel, len(subchannels))
         if counter_fmt.endswith("%"):
             total = sum(counts)
             values = [c / total for c in counts]

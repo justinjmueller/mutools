@@ -123,6 +123,7 @@ def _draw_detector(
     cathode_oaa: float,
     xlim: tuple,
     ylim: tuple,
+    show_cathode: bool = True,
 ) -> None:
     """
     Draw a single detector panel showing TPC active volumes, PRISM OAA
@@ -183,17 +184,18 @@ def _draw_detector(
             alpha=0.85,
         )
 
-    # 4. Cathode ring
-    ax.plot(
-        beam_x + cathode_r * np.cos(theta_arr),
-        beam_y + cathode_r * np.sin(theta_arr),
-        color=_CATHODE_COL,
-        lw=1.5,
-        ls=":",
-        zorder=6,
-        alpha=0.9,
-        label=f"Cathode ({cathode_oaa:.2f}°)",
-    )
+    # 4. Cathode ring (optional)
+    if show_cathode:
+        ax.plot(
+            beam_x + cathode_r * np.cos(theta_arr),
+            beam_y + cathode_r * np.sin(theta_arr),
+            color=_CATHODE_COL,
+            lw=1.5,
+            ls=":",
+            zorder=6,
+            alpha=0.9,
+            label=f"Cathode ({cathode_oaa:.2f}°)",
+        )
 
     # 5. Beam-axis marker
     ax.plot(beam_x, beam_y, "k+", ms=10, mew=2.0, zorder=8, label="Beam axis")
@@ -228,6 +230,8 @@ def prism_schematic(
     n_bins: int = 5,
     oaa_min: float = 0.0,
     oaa_max: float = 1.7,
+    bin_edges: Optional[list] = None,
+    show_cathode: bool = True,
     output: Optional[Path] = None,
 ) -> "matplotlib.figure.Figure":
     """
@@ -242,11 +246,20 @@ def prism_schematic(
     Parameters
     ----------
     n_bins : int
-        Number of OAA bins. Default is 5.
+        Number of OAA bins. Ignored when ``bin_edges`` is provided.
+        Default is 5.
     oaa_min : float
-        Lower edge of the first OAA bin in degrees. Default is 0.0.
+        Lower edge of the first OAA bin in degrees. Ignored when
+        ``bin_edges`` is provided. Default is 0.0.
     oaa_max : float
-        Upper edge of the last OAA bin in degrees. Default is 1.7.
+        Upper edge of the last OAA bin in degrees. Ignored when
+        ``bin_edges`` is provided. Default is 1.7.
+    bin_edges : list of float, optional
+        Explicit OAA bin edges in degrees. When provided, overrides
+        ``n_bins``, ``oaa_min``, and ``oaa_max``.
+    show_cathode : bool
+        Whether to draw the cathode OAA ring on each panel.
+        Default is ``True``.
     output : Optional[Path]
         Directory in which to save the figure as
         ``prism_schematic.pdf``.  If ``None``, the figure is not saved.
@@ -256,7 +269,12 @@ def prism_schematic(
     matplotlib.figure.Figure
         The completed figure.
     """
-    bin_edges = np.linspace(oaa_min, oaa_max, n_bins + 1)
+    if bin_edges is not None:
+        bin_edges = np.asarray(bin_edges, dtype=float)
+        n_bins = len(bin_edges) - 1
+        oaa_min, oaa_max = float(bin_edges[0]), float(bin_edges[-1])
+    else:
+        bin_edges = np.linspace(oaa_min, oaa_max, n_bins + 1)
     bin_colors = [_CMAP(0.15 + 0.7 * i / max(n_bins - 1, 1)) for i in range(n_bins)]
 
     sbnd_radii = [oaa_to_radius(e, SBND_Z) for e in bin_edges]
@@ -294,6 +312,7 @@ def prism_schematic(
         sbnd_cathode_r, sbnd_cathode_oaa,
         xlim=_make_lim(SBND_BEAM_X, half_span),
         ylim=_make_lim(sbnd_yc, half_span),
+        show_cathode=show_cathode,
     )
     _draw_detector(
         axes[1], "ICARUS",
@@ -303,6 +322,7 @@ def prism_schematic(
         icar_cathode_r, icar_cathode_oaa,
         xlim=_make_lim(ICAR_BEAM_X, half_span),
         ylim=_make_lim(icar_yc, half_span),
+        show_cathode=show_cathode,
     )
 
     sm = ScalarMappable(cmap=_CMAP, norm=plt.Normalize(oaa_min, oaa_max))

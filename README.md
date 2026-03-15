@@ -107,11 +107,15 @@ mp.saver.configure(fmt="png", dpi=300)
 with mp.saver.settings(fmt="svg", dpi=600):
     histogram(data, ..., output="figures/")
 
-# Restore default PDF output
-mp.saver.configure(fmt="pdf", dpi=150)
+# Rasterize histogram bars to eliminate inter-bin seam artefacts in PDF/SVG
+mp.saver.configure(rasterized=True)
 ```
 
 Supported formats: `eps`, `pdf`, `png`, `ps`, `svg`.
+
+The `rasterized` flag embeds histogram bars as a raster image inside the
+vector file, which prevents the thin vertical streaks that PDF/SVG viewers
+render between adjacent bins of a stacked histogram.
 
 ## Styles
 

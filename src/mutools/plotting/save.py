@@ -2,9 +2,9 @@
 Centralised figure saving for mutools.plotting.
 
 A module-level ``saver`` instance holds persistent settings (DPI, format,
-``bbox_inches``). All plotting functions in the package route their output
-through this object, so a single ``saver.configure(...)`` call changes
-behaviour everywhere at once.
+``bbox_inches``, ``rasterized``). All plotting functions in the package route
+their output through this object, so a single ``saver.configure(...)`` call
+changes behaviour everywhere at once.
 """
 
 from __future__ import annotations
@@ -33,12 +33,19 @@ class FigureSaver:
         Output format passed to ``Figure.savefig``. Default is ``"pdf"``.
     bbox_inches : str
         Whitespace trimming mode. Default is ``"tight"``.
+    rasterized : bool
+        When ``True``, histogram artists are rendered as raster images
+        embedded inside the vector output.  This eliminates the thin
+        inter-bin seams that appear in PDF/SVG viewers when stacked
+        histogram bars are drawn as adjacent vector rectangles.
+        Default is ``False``.
     """
 
     def __init__(self) -> None:
         self.dpi: int = 150
         self.fmt: str = "pdf"
         self.bbox_inches: str = "tight"
+        self.rasterized: bool = False
 
     def configure(
         self,
@@ -46,6 +53,7 @@ class FigureSaver:
         dpi: Optional[int] = None,
         fmt: Optional[str] = None,
         bbox_inches: Optional[str] = None,
+        rasterized: Optional[bool] = None,
     ) -> None:
         """
         Update one or more persistent save settings.
@@ -60,6 +68,9 @@ class FigureSaver:
         bbox_inches : str, optional
             Passed directly to ``Figure.savefig``.  Use ``"tight"`` to trim
             excess whitespace, or ``None`` to use the figure bounding box.
+        rasterized : bool, optional
+            When ``True``, histogram artists are rasterized to remove
+            inter-bin seam artefacts in vector formats (PDF, SVG).
         """
         if dpi is not None:
             self.dpi = int(dpi)
@@ -71,6 +82,8 @@ class FigureSaver:
             self.fmt = fmt
         if bbox_inches is not None:
             self.bbox_inches = bbox_inches
+        if rasterized is not None:
+            self.rasterized = bool(rasterized)
 
     @contextmanager
     def settings(self, **kwargs):
@@ -85,7 +98,7 @@ class FigureSaver:
         >>> with saver.settings(dpi=600, fmt="svg"):
         ...     histogram(data, ..., output="figures/")
         """
-        saved = {k: getattr(self, k) for k in ("dpi", "fmt", "bbox_inches")}
+        saved = {k: getattr(self, k) for k in ("dpi", "fmt", "bbox_inches", "rasterized")}
         self.configure(**kwargs)
         try:
             yield

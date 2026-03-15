@@ -465,6 +465,7 @@ def histogram(
         histtype="barstacked",
         edgecolor="none",
         alpha=0.7,
+        rasterized=saver.rasterized,
     )
     proxy_stack = construct_proxy_stack(subchannels)[::-1]
 

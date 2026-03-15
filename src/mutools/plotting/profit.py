@@ -354,6 +354,7 @@ def histogram(
     counter_fmt: str = ".0f",
     scale_by_width: bool = False,
     detector_label: Optional[str] = None,
+    channel_label: Optional[str] = None,
     watermark: Optional[str] = r"$\bf{SBN}$ Internal",
     output: Optional[Path] = None,
 ) -> "matplotlib.figure.Figure":
@@ -417,14 +418,18 @@ def histogram(
         display. Raw unscaled traces are always used for statistical
         uncertainty calculations. Default is False.
     detector_label : Optional[str]
-        An optional label for the detector, which can be used in the
-        plot title or annotations.
+        An optional label for the detector, displayed as the legend title.
+    channel_label : Optional[str]
+        An optional channel name displayed on a new line beneath
+        ``detector_label`` in the legend title.  Ignored if
+        ``detector_label`` is ``None``.
     output : Optional[Path]
         An optional path for saving the figure.
 
     Returns
     -------
-    None.
+    matplotlib.figure.Figure
+        The completed figure.
     """
     # Create the figure and axes for the plot
     figure = plt.figure(figsize=(8, 6))
@@ -509,7 +514,8 @@ def histogram(
     legend = ax.legend(handles=proxy_stack + ext + [meta_patch])
 
     if detector_label is not None:
-        legend.set_title(detector_label)
+        title = detector_label if channel_label is None else f"{detector_label}\n{channel_label}"
+        legend.set_title(title)
         legend.get_title().set_fontweight("bold")
         legend.get_title().set_fontsize(14)
         legend.get_title().set_color("#d67a11")

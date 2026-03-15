@@ -48,6 +48,47 @@ import mutools.plotting as mp
 mp.run("plots.toml")
 ```
 
+A minimal TOML configuration looks like:
+
+```toml
+[general]
+input            = "output.root"
+code_version     = "v1.0"
+selection_version = "v2.3"
+subchannels      = ["CC QE", "CC Res", "NC"]
+savefig          = true
+output           = "figures/"
+
+# Integer keys map detector/channel indices to display labels.
+# channel_label is shown on a new line beneath detector_label in the legend.
+[general.detectors]
+1 = "SBND"
+2 = "ICARUS"
+
+[general.channels]
+0 = "CC Inclusive"
+1 = "NC"
+
+[[plot]]
+type      = "histogram"
+variable  = 0
+channel   = 0
+detectors = [1, 2]
+xlabel    = "Reconstructed energy [GeV]"
+ylabel    = "Events / bin"
+
+[[plot]]
+type      = "uncertainty"
+channel   = 0
+detectors = [1, 2]
+tags      = ["flux", "xsec", "detector"]
+xlabel    = "Reconstructed energy [GeV]"
+```
+
+The `[general.channels]` block is optional. When present, the label for
+`plot.channel` is looked up automatically and passed as `channel_label` to
+the plotting function.
+
 Individual plot functions are also available directly:
 
 ```python
@@ -63,6 +104,7 @@ histogram(
     code_version="v1.0", selection_version="v2.3",
     subchannels=["CC QE", "CC Res", "NC"],
     detector_label="SBND",
+    channel_label="CC Inclusive",   # optional: shown beneath detector label
 )
 
 uncertainty(

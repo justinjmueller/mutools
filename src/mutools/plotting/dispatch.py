@@ -82,12 +82,14 @@ def run(config: Union[dict, str, Path]) -> None:
         handler = _HANDLERS[plot_type]
 
         for detector in plot["detectors"]:
+            channel = plot.get("channel", 0)
             # Common kwargs shared across all plot types.
             kwargs = {
                 **base,
                 "detector": detector,
                 "detector_label": general["detectors"][detector],
-                "channel": plot.get("channel", 0),
+                "channel": channel,
+                "channel_label": general["channels"][channel] if "channels" in general else None,
                 "xlabel": plot["xlabel"],
                 "xlim": plot.get("xlim"),
                 "ylim": plot.get("ylim"),

@@ -21,6 +21,7 @@ from typing import Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
+from .save import saver
 import matplotlib.patches as patches
 from matplotlib.colors import to_rgba
 from matplotlib.lines import Line2D
@@ -357,8 +358,6 @@ def prism_schematic(
     )
 
     if output is not None:
-        output = Path(output)
-        output.mkdir(parents=True, exist_ok=True)
-        fig.savefig(output / "prism_schematic.pdf", dpi=200)
+        saver.save(fig, output, "prism_schematic")
 
     return fig

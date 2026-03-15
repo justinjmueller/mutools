@@ -91,6 +91,28 @@ fig = prism_schematic(show_cathode=False)                     # hide cathode rin
 fig = prism_schematic(output="figures/")                      # save to figures/prism_schematic.pdf
 ```
 
+## Figure saving
+
+All plotting functions accept an `output` keyword argument. When provided,
+the figure is saved to that directory via the module-level `saver` object,
+which holds persistent settings (DPI, format, bounding-box trimming).
+
+```python
+import mutools.plotting as mp
+
+# Configure once — applies everywhere
+mp.saver.configure(fmt="png", dpi=300)
+
+# Temporary override for a single block
+with mp.saver.settings(fmt="svg", dpi=600):
+    histogram(data, ..., output="figures/")
+
+# Restore default PDF output
+mp.saver.configure(fmt="pdf", dpi=150)
+```
+
+Supported formats: `eps`, `pdf`, `png`, `ps`, `svg`.
+
 ## Styles
 
 ```python

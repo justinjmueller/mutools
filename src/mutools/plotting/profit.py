@@ -10,6 +10,7 @@ import uproot
 from typing import Optional, Tuple
 from enum import Enum
 from .helpers import mark_axis
+from .save import saver
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
@@ -355,7 +356,7 @@ def histogram(
     detector_label: Optional[str] = None,
     watermark: Optional[str] = r"$\bf{SBN}$ Internal",
     output: Optional[Path] = None,
-) -> None:
+) -> "matplotlib.figure.Figure":
     """
     Create a plot of information from a ProfitPlotData object,
     including the stacked histogram for the subchannels and the error
@@ -602,20 +603,10 @@ def histogram(
     # Mark the axis with the appropriate label
     mark_axis(ax, watermark, hadj=0.035)
 
-    # Save the figure if requested. We use the detector name, variable
-    # index, and code version to construct the filename, which provides
-    # useful information about the content and provenance of the plot.
     if output is not None:
-        # Ensure the output directory exists before trying to save the
-        # figure.
-        output.mkdir(parents=True, exist_ok=True)
+        saver.save(figure, output, f"hist_{detector}_{variable}_{code_version}")
 
-        # Construct the filename using the detector name, variable
-        # index, and code version. This naming convention helps to keep
-        # the files organized and makes it easier to identify the
-        # content of each plot based on its filename.
-        figname = f"hist_{detector}_{variable}_{code_version}.png"
-        figure.savefig(output / figname)
+    return figure
 
 
 def uncertainty(
@@ -631,8 +622,9 @@ def uncertainty(
     ylim: Optional[Tuple[float, float]] = None,
     detector_label: Optional[str] = None,
     watermark: Optional[str] = r"$\bf{SBN}$ Internal",
+    output: Optional[Path] = None,
     **kwargs,
-) -> None:
+) -> "matplotlib.figure.Figure":
     """
     Create a step plot of the fractional systematic uncertainties for
     a set of tags (groups of systematics) from a ProfitPlotData object.
@@ -667,10 +659,14 @@ def uncertainty(
         above the legend.
     watermark : Optional[str]
         The watermark label placed above the axis.
+    output : Optional[Path]
+        Directory in which to save the figure. The filename is
+        constructed from ``detector`` and ``code_version``.
 
     Returns
     -------
-    None.
+    matplotlib.figure.Figure
+        The completed figure.
     """
     figure = plt.figure(figsize=(8, 6))
     ax = figure.add_subplot()
@@ -710,3 +706,8 @@ def uncertainty(
     texts[-1].set_alpha(0.6)
 
     mark_axis(ax, watermark, hadj=0.035)
+
+    if output is not None:
+        saver.save(figure, output, f"uncertainty_{detector}_{code_version}")
+
+    return figure

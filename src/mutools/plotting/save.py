@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Sequence, Union
 
 
 _VALID_FORMATS = {"eps", "pdf", "png", "ps", "svg"}
@@ -140,3 +140,60 @@ class FigureSaver:
 
 #: Module-level :class:`FigureSaver` instance used by all plotting functions.
 saver = FigureSaver()
+
+
+def create_gif(
+    paths: Sequence[Union[str, Path]],
+    output: Union[str, Path],
+    *,
+    fps: float = 2.0,
+    loop: int = 0,
+) -> Path:
+    """
+    Stitch a sequence of PNG files into an animated GIF.
+
+    Parameters
+    ----------
+    paths : sequence of str or Path
+        Ordered list of PNG file paths to use as frames.
+    output : str or Path
+        Destination path for the GIF, including filename and ``.gif``
+        extension.
+    fps : float, optional
+        Frames per second. Default is ``2.0``.
+    loop : int, optional
+        Number of times the GIF loops. ``0`` means infinite. Default is ``0``.
+
+    Returns
+    -------
+    Path
+        The path that was written.
+
+    Raises
+    ------
+    ValueError
+        If *paths* is empty or any path does not have a ``.png`` extension.
+    FileNotFoundError
+        If any path does not exist.
+    """
+    import imageio.v3 as iio
+
+    paths = [Path(p) for p in paths]
+
+    if not paths:
+        raise ValueError("paths must contain at least one file.")
+
+    for p in paths:
+        if p.suffix.lower() != ".png":
+            raise ValueError(f"Only PNG files are supported; got {p.name!r}.")
+        if not p.exists():
+            raise FileNotFoundError(f"File not found: {p}")
+
+    output = Path(output)
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    frames = [iio.imread(p) for p in paths]
+    duration_ms = 1000.0 / fps
+    iio.imwrite(output, frames, extension=".gif", plugin="pillow", duration=duration_ms, loop=loop)
+
+    return output

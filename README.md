@@ -159,6 +159,25 @@ The `rasterized` flag embeds histogram bars as a raster image inside the
 vector file, which prevents the thin vertical streaks that PDF/SVG viewers
 render between adjacent bins of a stacked histogram.
 
+## Animated GIFs
+
+`create_gif` stitches an ordered sequence of PNG files into an animated GIF
+using `imageio`.
+
+```python
+import mutools.plotting as mp
+
+mp.create_gif(
+    ["frame_0.png", "frame_1.png", "frame_2.png"],
+    output="figures/animation.gif",
+    fps=2.0,   # frames per second (default: 2.0)
+    loop=0,    # 0 = loop forever (default)
+)
+```
+
+Only PNG inputs are supported. The output directory is created automatically
+if it does not exist.
+
 ## Styles
 
 ```python

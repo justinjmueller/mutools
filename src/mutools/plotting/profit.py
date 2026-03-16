@@ -7,10 +7,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import uproot
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 from enum import Enum
 from .helpers import mark_axis
 from .save import saver, FixedPrecisionScalarFormatter
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
@@ -719,5 +720,129 @@ def uncertainty(
 
     if output is not None:
         saver.save(figure, output, f"uncertainty_{detector}_{code_version}")
+
+    return figure
+
+
+def overlay(
+    data: ProfitPlotData,
+    *,
+    variable: Union[int, list[int]],
+    detectors: list[int],
+    channel: int,
+    xlabel: str,
+    ylabel: str,
+    code_version: str,
+    selection_version: str,
+    xlim: Optional[Tuple[float, float]] = None,
+    ylim: Optional[Tuple[float, float]] = None,
+    detector_labels: Optional[list[str]] = None,
+    channel_label: Optional[str] = None,
+    watermark: Optional[str] = r"$\bf{SBN}$ Internal",
+    scale_by_width: bool = False,
+    output: Optional[Path] = None,
+) -> "matplotlib.figure.Figure":
+    """
+    Overlay the total CV spectrum for multiple detectors on a single plot.
+
+    Each detector is drawn as a step-filled histogram with a semi-transparent
+    fill and a fully opaque edge, making it easy to compare shapes across
+    detectors.
+
+    Parameters
+    ----------
+    data : ProfitPlotData
+        The data object containing the histogram traces.
+    variable : int or list[int]
+        The variable index within the PROfit configuration. A single int
+        is used for all detectors; a list must match the length of
+        *detectors* and maps each entry to the corresponding detector.
+    detectors : list[int]
+        Detector indices to overlay, in the order they will be drawn and
+        labelled.
+    channel : int
+        The channel index within the PROfit configuration.
+    xlabel : str
+        Label for the x-axis.
+    ylabel : str
+        Label for the y-axis.
+    code_version : str
+        PROfit version string included in the legend metadata.
+    selection_version : str
+        Selection version string included in the legend metadata.
+    xlim : tuple[float, float], optional
+        x-axis limits.
+    ylim : tuple[float, float], optional
+        y-axis limits.
+    detector_labels : list[str], optional
+        Display names for each detector, in the same order as *detectors*.
+        Defaults to the string representation of each detector index.
+    channel_label : optional[str]
+        Optional legend title shown above the detector entries.
+    watermark : str, optional
+        Watermark label placed above the axis.
+    scale_by_width : bool, optional
+        If ``True``, retrieve bin-width-scaled traces. Default is ``False``.
+    output : Path, optional
+        Directory in which to save the figure.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The completed figure.
+    """
+    variables = [variable] * len(detectors) if isinstance(variable, int) else variable
+
+    figure = plt.figure(figsize=(8, 6))
+    ax = figure.add_subplot()
+
+    for i, (detector, var) in enumerate(zip(detectors, variables)):
+        color = f"C{i}"
+        trace = data.get_trace(
+            f"{var}:0:{detector}:{channel}:total:CV",
+            TraceType.HIST_CONTENTS,
+            scaled=scale_by_width,
+        )
+        edges = np.concatenate([np.array([trace[0, 1]]), trace[:, 2]])
+        label = detector_labels[i] if detector_labels is not None else str(detector)
+        ax.hist(
+            trace[:, 0],
+            bins=edges,
+            weights=trace[:, 3],
+            histtype="stepfilled",
+            fc=mcolors.to_rgba(color, alpha=0.5),
+            ec=mcolors.to_rgba(color, alpha=1.0),
+            label=label,
+        )
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    meta_patch = construct_meta_handle(code_version, selection_version)
+    h, _ = ax.get_legend_handles_labels()
+    legend = ax.legend(handles=h + [meta_patch])
+    if channel_label is not None:
+        legend.set_title(channel_label)
+        legend.get_title().set_fontweight("bold")
+        legend.get_title().set_fontsize(14)
+        legend.get_title().set_color("#d67a11")
+    texts = legend.get_texts()
+    texts[-1].set_fontsize(8)
+    texts[-1].set_alpha(0.6)
+
+    if saver.ytick_precision is not None:
+        ax.yaxis.set_major_formatter(FixedPrecisionScalarFormatter(saver.ytick_precision))
+    else:
+        ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
+    mark_axis(ax, watermark, hadj=0.035)
+
+    if output is not None:
+        var_str = "-".join(str(v) for v in variables)
+        saver.save(figure, output, f"overlay_{channel}_{var_str}_{code_version}")
 
     return figure

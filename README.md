@@ -92,7 +92,7 @@ the plotting function.
 Individual plot functions are also available directly:
 
 ```python
-from mutools.plotting.profit import histogram, uncertainty, ProfitPlotData
+from mutools.plotting.profit import histogram, uncertainty, overlay, ProfitPlotData
 
 data = ProfitPlotData("output.root")
 
@@ -115,6 +115,42 @@ uncertainty(
     code_version="v1.0", selection_version="v2.3",
     detector_label="SBND",
 )
+
+overlay(
+    data,
+    variable=0, detectors=[1, 2], channel=0,
+    xlabel="Reconstructed energy [GeV]",
+    ylabel="Events / bin",
+    code_version="v1.0", selection_version="v2.3",
+    detector_labels=["SBND", "ICARUS"],
+    channel_label="CC Inclusive",   # optional: shown as legend title
+)
+```
+
+`overlay` draws the total CV spectrum for each detector as a step-filled
+histogram with a semi-transparent fill and solid edge, making it easy to
+compare shapes. A different variable can be assigned to each detector by
+passing a list to `variable`:
+
+```python
+overlay(
+    data,
+    variable=[0, 1], detectors=[1, 2], channel=0,
+    ...
+)
+```
+
+In TOML, `overlay` produces a single figure covering all listed detectors
+rather than one figure per detector:
+
+```toml
+[[plot]]
+type      = "overlay"
+variable  = 0          # or variable = [0, 1] for per-detector variables
+channel   = 0
+detectors = [1, 2]
+xlabel    = "Reconstructed energy [GeV]"
+ylabel    = "Events / bin"
 ```
 
 ## PRISM schematic
@@ -151,6 +187,9 @@ with mp.saver.settings(fmt="svg", dpi=600):
 
 # Rasterize histogram bars to eliminate inter-bin seam artefacts in PDF/SVG
 mp.saver.configure(rasterized=True)
+
+# Fix y-axis tick label precision for consistent width across frames
+mp.saver.configure(ytick_precision=1)   # e.g. 1.0 × 10³
 ```
 
 Supported formats: `eps`, `pdf`, `png`, `ps`, `svg`.

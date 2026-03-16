@@ -13,8 +13,38 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional, Sequence, Union
 
+import matplotlib.ticker as ticker
+
 
 _VALID_FORMATS = {"eps", "pdf", "png", "ps", "svg"}
+
+
+class FixedPrecisionScalarFormatter(ticker.ScalarFormatter):
+    """
+    ScalarFormatter that enforces a fixed decimal precision on tick labels.
+
+    Behaves identically to :class:`matplotlib.ticker.ScalarFormatter` with
+    scientific notation and ``powerlimits=(0, 0)``, except that the number of
+    decimal places shown on the coefficient is fixed rather than chosen
+    automatically from the data range.  This keeps y-axis tick labels the same
+    width across all frames of a flip-book comparison.
+
+    Parameters
+    ----------
+    precision : int
+        Number of decimal places for the coefficient. Default is ``2``.
+    **kwargs
+        Forwarded to :class:`~matplotlib.ticker.ScalarFormatter`.
+    """
+
+    def __init__(self, precision: int = 2, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.precision = precision
+        self.set_scientific(True)
+        self.set_powerlimits((0, 0))
+
+    def _set_format(self) -> None:
+        self.format = f"%.{self.precision}f"
 
 
 class FigureSaver:
@@ -39,6 +69,10 @@ class FigureSaver:
         inter-bin seams that appear in PDF/SVG viewers when stacked
         histogram bars are drawn as adjacent vector rectangles.
         Default is ``False``.
+    ytick_precision : int or None
+        When set, a :class:`FixedPrecisionScalarFormatter` with this many
+        decimal places is applied to the y-axis of every plot.  When
+        ``None`` (default), matplotlib chooses precision automatically.
     """
 
     def __init__(self) -> None:
@@ -46,6 +80,7 @@ class FigureSaver:
         self.fmt: str = "pdf"
         self.bbox_inches: str = "tight"
         self.rasterized: bool = False
+        self.ytick_precision: Optional[int] = None
 
     def configure(
         self,
@@ -54,6 +89,7 @@ class FigureSaver:
         fmt: Optional[str] = None,
         bbox_inches: Optional[str] = None,
         rasterized: Optional[bool] = None,
+        ytick_precision: Optional[int] = None,
     ) -> None:
         """
         Update one or more persistent save settings.
@@ -71,6 +107,10 @@ class FigureSaver:
         rasterized : bool, optional
             When ``True``, histogram artists are rasterized to remove
             inter-bin seam artefacts in vector formats (PDF, SVG).
+        ytick_precision : int, optional
+            Number of decimal places for y-axis tick label coefficients.
+            Applies a :class:`FixedPrecisionScalarFormatter` to every plot.
+            Pass ``None`` to restore automatic precision.
         """
         if dpi is not None:
             self.dpi = int(dpi)
@@ -84,6 +124,8 @@ class FigureSaver:
             self.bbox_inches = bbox_inches
         if rasterized is not None:
             self.rasterized = bool(rasterized)
+        if ytick_precision is not None:
+            self.ytick_precision = int(ytick_precision)
 
     @contextmanager
     def settings(self, **kwargs):
@@ -98,7 +140,7 @@ class FigureSaver:
         >>> with saver.settings(dpi=600, fmt="svg"):
         ...     histogram(data, ..., output="figures/")
         """
-        saved = {k: getattr(self, k) for k in ("dpi", "fmt", "bbox_inches", "rasterized")}
+        saved = {k: getattr(self, k) for k in ("dpi", "fmt", "bbox_inches", "rasterized", "ytick_precision")}
         self.configure(**kwargs)
         try:
             yield

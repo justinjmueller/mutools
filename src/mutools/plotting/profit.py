@@ -10,7 +10,7 @@ import uproot
 from typing import Optional, Tuple
 from enum import Enum
 from .helpers import mark_axis
-from .save import saver
+from .save import saver, FixedPrecisionScalarFormatter
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
@@ -523,10 +523,13 @@ def histogram(
     texts[-1].set_fontsize(8)
     texts[-1].set_alpha(0.6)
 
-    # The y-axis should use scientific notation to force consistent
-    # formatting across different plots, especially when the range of
-    # values can vary significantly.
-    ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    # The y-axis uses scientific notation. When ytick_precision is set on the
+    # global saver, a fixed-precision formatter is applied so tick labels do
+    # not change width between frames.
+    if saver.ytick_precision is not None:
+        ax.yaxis.set_major_formatter(FixedPrecisionScalarFormatter(saver.ytick_precision))
+    else:
+        ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     # Set the y-axis label and range for the main axis.
     ax.set_ylabel(ylabel)

@@ -280,6 +280,7 @@ def add_outline(
 
 def construct_proxy_stack(
     subchannels: list[str],
+    colors: Optional[list] = None,
 ) -> list[Patch]:
     """
     Construct Patches for the legend that match the colors of the
@@ -289,17 +290,20 @@ def construct_proxy_stack(
     ----------
     subchannels : list[str]
         List of subchannel names.
+    colors : list, optional
+        Color specs for each subchannel, in subchannel order. Any
+        matplotlib color spec is accepted. Defaults to ``C0``, ``C1``,
+        ... from the active color cycle.
 
     Returns
     -------
     list[Patch]
         List of matplotlib Patch objects for the legend.
     """
-    # Each patch corresponds to a subchannel, and the color is
-    # determined by the default color cycle in matplotlib. The legend
-    # labels are taken from the provided subchannels list.
+    n = len(subchannels)
+    resolved = colors if colors is not None else [f"C{i}" for i in range(n)]
     proxy_stack = [
-        Patch(facecolor=f"C{i}", edgecolor="black", linewidth=1.5, alpha=0.7, label=subchannel)
+        Patch(facecolor=resolved[i], edgecolor="black", linewidth=1.5, alpha=0.7, label=subchannel)
         for i, subchannel in enumerate(subchannels[::-1])
     ]
     return proxy_stack
@@ -357,6 +361,7 @@ def histogram(
     detector_label: Optional[str] = None,
     channel_label: Optional[str] = None,
     watermark: Optional[str] = r"$\bf{SBN}$ Internal",
+    colors: Optional[list] = None,
     output: Optional[Path] = None,
 ) -> "matplotlib.figure.Figure":
     """
@@ -424,6 +429,10 @@ def histogram(
         An optional channel name displayed on a new line beneath
         ``detector_label`` in the legend title.  Ignored if
         ``detector_label`` is ``None``.
+    colors : list, optional
+        Color specs for each subchannel, in subchannel order. Any
+        matplotlib color spec is accepted. Defaults to the active color
+        cycle.
     output : Optional[Path]
         An optional path for saving the figure.
 
@@ -464,6 +473,8 @@ def histogram(
     # centers and contents from the traces, and the edges calculated
     # from the first trace. We also create a proxy stack for the legend
     # based on the provided subchannel names.
+    if colors is not None:
+        ax.set_prop_cycle(color=[mcolors.to_rgba(c) for c in colors])
     ax.hist(
         [trace[:, 0] for trace in traces],
         bins=edges,
@@ -473,7 +484,7 @@ def histogram(
         alpha=0.7,
         rasterized=saver.rasterized,
     )
-    proxy_stack = construct_proxy_stack(subchannels)[::-1]
+    proxy_stack = construct_proxy_stack(subchannels, colors=colors)[::-1]
 
     # If a counter variable is provided, append the per-subchannel
     # candidate counts to the legend labels. construct_proxy_stack
@@ -633,6 +644,7 @@ def uncertainty(
     ylim: Optional[Tuple[float, float]] = None,
     detector_label: Optional[str] = None,
     watermark: Optional[str] = r"$\bf{SBN}$ Internal",
+    colors: Optional[list] = None,
     output: Optional[Path] = None,
     **kwargs,
 ) -> "matplotlib.figure.Figure":
@@ -670,6 +682,9 @@ def uncertainty(
         above the legend.
     watermark : Optional[str]
         The watermark label placed above the axis.
+    colors : list, optional
+        Color specs for each tag, in tag order. Any matplotlib color
+        spec is accepted. Defaults to the active color cycle.
     output : Optional[Path]
         Directory in which to save the figure. The filename is
         constructed from ``detector`` and ``code_version``.
@@ -682,6 +697,8 @@ def uncertainty(
     figure = plt.figure(figsize=(8, 6))
     ax = figure.add_subplot()
 
+    if colors is not None:
+        ax.set_prop_cycle(color=[mcolors.to_rgba(c) for c in colors])
     for tag in tags:
         name = f"0:{detector}:{channel}:{tag}:SUM"
         trace = data.get_trace(name, TraceType.FRAC_SYST)
@@ -739,6 +756,7 @@ def overlay(
     detector_labels: Optional[list[str]] = None,
     channel_label: Optional[str] = None,
     watermark: Optional[str] = r"$\bf{SBN}$ Internal",
+    colors: Optional[list] = None,
     scale_by_width: bool = False,
     output: Optional[Path] = None,
 ) -> "matplotlib.figure.Figure":
@@ -781,6 +799,10 @@ def overlay(
         Optional legend title shown above the detector entries.
     watermark : str, optional
         Watermark label placed above the axis.
+    colors : list, optional
+        Color specs for each detector, in the same order as *detectors*.
+        Any matplotlib color spec is accepted. Defaults to ``C0``,
+        ``C1``, ... from the active color cycle.
     scale_by_width : bool, optional
         If ``True``, retrieve bin-width-scaled traces. Default is ``False``.
     output : Path, optional
@@ -797,7 +819,7 @@ def overlay(
     ax = figure.add_subplot()
 
     for i, (detector, var) in enumerate(zip(detectors, variables)):
-        color = f"C{i}"
+        color = colors[i] if colors is not None else f"C{i}"
         trace = data.get_trace(
             f"{var}:0:{detector}:{channel}:total:CV",
             TraceType.HIST_CONTENTS,

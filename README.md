@@ -105,6 +105,7 @@ histogram(
     subchannels=["CC QE", "CC Res", "NC"],
     detector_label="SBND",
     channel_label="CC Inclusive",   # optional: shown beneath detector label
+    colors=["steelblue", "tomato", "C2"],   # optional: one per subchannel
 )
 
 uncertainty(
@@ -114,6 +115,7 @@ uncertainty(
     xlabel="Reconstructed energy [GeV]",
     code_version="v1.0", selection_version="v2.3",
     detector_label="SBND",
+    colors=["C3", "C5", "#aabbcc"],   # optional: one per tag
 )
 
 overlay(
@@ -124,8 +126,14 @@ overlay(
     code_version="v1.0", selection_version="v2.3",
     detector_labels=["SBND", "ICARUS"],
     channel_label="CC Inclusive",   # optional: shown as legend title
+    colors=["C1", "C4"],            # optional: one per detector
 )
 ```
+
+All three functions accept an optional `colors` list. Each entry can be
+any matplotlib color spec — color cycle indices (``"C0"``, ``"C3"``, ...),
+named colors (``"steelblue"``), hex strings, or RGB tuples. When omitted,
+the active style's color cycle is used in order.
 
 `overlay` draws the total CV spectrum for each detector as a step-filled
 histogram with a semi-transparent fill and solid edge, making it easy to
@@ -151,6 +159,7 @@ channel   = 0
 detectors = [1, 2]
 xlabel    = "Reconstructed energy [GeV]"
 ylabel    = "Events / bin"
+colors    = ["C1", "C4"]   # optional: one per detector
 ```
 
 ## PRISM schematic

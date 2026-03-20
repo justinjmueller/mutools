@@ -96,6 +96,8 @@ def run(config: Union[dict, str, Path]) -> None:
             }
             if "watermark" in plot:
                 kwargs["watermark"] = plot["watermark"]
+            if "colors" in plot:
+                kwargs["colors"] = plot["colors"]
             overlay(data, **kwargs)
             continue
 
@@ -121,6 +123,8 @@ def run(config: Union[dict, str, Path]) -> None:
             }
             if "watermark" in plot:
                 kwargs["watermark"] = plot["watermark"]
+            if "colors" in plot:
+                kwargs["colors"] = plot["colors"]
 
             # Type-specific kwargs.
             if plot_type == "histogram":

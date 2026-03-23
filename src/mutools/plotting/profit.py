@@ -81,6 +81,9 @@ class ProfitPlotData:
         self._raw_data[TraceType.HIST_CONTENTS] = dict()
         self._data[TraceType.HIST_CONTENTS] = dict()
         deserialize = ["bin_center", "bin_low_edge", "bin_high_edge", "bin_content"]
+        if "bin_error" in data.columns:
+            #TODO: Revisit this when the bin_error column is fully implemented
+            deserialize.append("bin_error")
         for k, group in data.groupby(cols):
             name = f"{k[0]}:{k[1]}:{k[2]}:{k[3]}:{k[4]}:{k[5]}"
             raw = group[deserialize].to_numpy().copy()
@@ -90,6 +93,8 @@ class ProfitPlotData:
                 counts = raw.copy()
                 widths = counts[:, 2] - counts[:, 1]
                 counts[:, 3] *= widths
+                if counts.shape[1] > 4:
+                    counts[:, 4] *= widths
                 self._raw_data[TraceType.HIST_CONTENTS][name] = counts
             else:
                 self._raw_data[TraceType.HIST_CONTENTS][name] = raw

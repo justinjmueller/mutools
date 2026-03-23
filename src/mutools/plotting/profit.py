@@ -117,6 +117,15 @@ class ProfitPlotData:
             else:
                 self._raw_data[TraceType.HIST_ERROR_BAND][name] = raw
 
+        # Infer grid dimensions from non-ratio hist1d entries.  Ratio
+        # entries carry RATIO_* prefixes; regular entries use CV, DATA,
+        # etc.  These counts are needed for decoding the flat detector
+        # index stored in the subchannel field of ratio traces.
+        _reg = [k for k in self._data[TraceType.HIST_CONTENTS]
+                if not k.split(":")[5].startswith("RATIO_")]
+        self._n_detectors = (max(int(k.split(":")[2]) for k in _reg) + 1) if _reg else 1
+        self._n_channels  = (max(int(k.split(":")[3]) for k in _reg) + 1) if _reg else 1
+
         # Filter to the "frac_syst" tag, which contains the fractional
         # systematic uncertainties.
         data = pd.DataFrame(self._rf["frac_syst"].arrays(library="np"))
@@ -129,6 +138,71 @@ class ProfitPlotData:
             raw = group[deserialize].to_numpy()
             self._raw_data[TraceType.FRAC_SYST][name] = raw
             self._data[TraceType.FRAC_SYST][name] = raw
+
+    def get_ratio_trace(
+        self,
+        detector_num: int,
+        detector_den: int,
+        channel: int,
+        prefix: str,
+        trace_type: TraceType = TraceType.HIST_CONTENTS,
+    ) -> np.ndarray:
+        """
+        Retrieve a ratio trace for a numerator/denominator detector pair.
+
+        The ratio entries in hist1d and errorband encode the numerator
+        histogram's flat index in the (mode, detector, channel) fields
+        and store the denominator's flat index in the subchannel field.
+        This method resolves that encoding using the inferred grid
+        dimensions and returns the matching array.
+
+        Parameters
+        ----------
+        detector_num : int
+            Index of the numerator detector.
+        detector_den : int
+            Index of the denominator detector.
+        channel : int
+            Channel index (only same-channel ratios are stored).
+        prefix : str
+            One of ``"RATIO_CV"``, ``"RATIO_BF"``, ``"RATIO_DATA"``,
+            or ``"RATIO_ERR"``.
+        trace_type : TraceType, optional
+            ``TraceType.HIST_CONTENTS`` (default) or
+            ``TraceType.HIST_ERROR_BAND``.
+
+        Returns
+        -------
+        np.ndarray
+            The requested trace array.  For HIST_CONTENTS the columns
+            are ``[bin_center, bin_low_edge, bin_high_edge,
+            bin_content]``; for HIST_ERROR_BAND they are
+            ``[x_value, y_value, error_y_low, error_y_high]``.
+
+        Raises
+        ------
+        KeyError
+            If no matching trace is found.
+        """
+        nd, nc = self._n_detectors, self._n_channels
+        store = self._data[trace_type]
+        for key, arr in store.items():
+            parts = key.split(":")
+            if parts[5] != prefix:
+                continue
+            if int(parts[2]) != detector_num:
+                continue
+            if int(parts[3]) != channel:
+                continue
+            idx_den = int(parts[4])
+            # Same-channel constraint: idx_den % nc == channel.
+            # Denominator detector:  (idx_den // nc) % nd == detector_den.
+            if idx_den % nc == channel and (idx_den // nc) % nd == detector_den:
+                return arr
+        raise KeyError(
+            f"No ratio trace found: detector_num={detector_num}, "
+            f"detector_den={detector_den}, channel={channel}, prefix={prefix!r}"
+        )
 
     def get_counts(self, variable: int, detector: int, channel: int, n_subchannels: int) -> list:
         """
@@ -191,6 +265,8 @@ def add_error_band(
     y: np.ndarray,
     yerr: np.ndarray | list[np.ndarray],
     label: str = "Total Error Band",
+    color: str = "black",
+    hatch: str = "////",
 ) -> Patch:
     """
     Add an error band to a plot by filling the area between the upper
@@ -234,16 +310,16 @@ def add_error_band(
         ymin_step,
         ymax_step,
         step="post",
-        facecolor="black",
+        facecolor=color,
         alpha=0.15,
-        edgecolor="black",
-        hatch="////",
+        edgecolor=color,
+        hatch=hatch,
         linewidth=0.0,
         zorder=1,
     )
 
     patch = Patch(
-        facecolor="black", alpha=0.15, edgecolor="black", hatch="////", linewidth=0.0, label=label
+        facecolor=color, alpha=0.15, edgecolor=color, hatch=hatch, linewidth=0.0, label=label
     )
 
     return patch
@@ -627,6 +703,206 @@ def histogram(
 
     if output is not None:
         saver.save(figure, output, f"hist_{detector}_{variable}_{code_version}")
+
+    return figure
+
+
+def ratio(
+    data: ProfitPlotData,
+    *,
+    detector_num: int,
+    detector_den: int,
+    channel: int,
+    xlabel: str,
+    code_version: str,
+    selection_version: str,
+    xlim: Optional[Tuple[float, float]] = None,
+    ylim: Optional[Tuple[float, float]] = None,
+    rlim: Optional[Tuple[float, float]] = None,
+    detector_num_label: Optional[str] = None,
+    detector_den_label: Optional[str] = None,
+    channel_label: Optional[str] = None,
+    show_data: bool = True,
+    watermark: Optional[str] = r"$\bf{SBN}$ Internal",
+    output: Optional[Path] = None,
+) -> "matplotlib.figure.Figure":
+    """
+    Plot the pre- and post-fit uncertainty bands for a detector ratio.
+
+    The main panel overlays the pre-fit systematic band (``RATIO_CV``
+    from the errorband tree, drawn in black) and the post-fit systematic
+    band (``RATIO_BF`` from the errorband tree, drawn in red).  A step
+    line at the central ratio value is drawn for each band.  Optionally,
+    data ratio points (``RATIO_DATA`` from hist1d) are overlaid as
+    errorbars.
+
+    The sub-panel shows the error improvement ratio (``RATIO_ERR`` from
+    hist1d), i.e. post-fit error divided by pre-fit error, as a step
+    plot with a dashed reference line at unity.
+
+    Parameters
+    ----------
+    data : ProfitPlotData
+        The data object containing the ratio traces.
+    detector_num : int
+        Index of the numerator detector.
+    detector_den : int
+        Index of the denominator detector.
+    channel : int
+        Channel index.
+    xlabel : str
+        Label for the x-axis (shown on the sub-panel).
+    code_version : str
+        PROfit version string included in the legend metadata.
+    selection_version : str
+        Selection version string included in the legend metadata.
+    xlim : tuple[float, float], optional
+        x-axis limits.
+    ylim : tuple[float, float], optional
+        y-axis limits for the main ratio panel.
+    rlim : tuple[float, float], optional
+        y-axis limits for the error-improvement sub-panel.
+    detector_num_label : str, optional
+        Display name for the numerator detector.
+    detector_den_label : str, optional
+        Display name for the denominator detector.
+    channel_label : str, optional
+        Optional channel name shown beneath the detector pair label in
+        the legend title.
+    show_data : bool, optional
+        If ``True`` (default), overlay data ratio points from
+        ``RATIO_DATA`` when they are present in the file.
+    watermark : str, optional
+        Watermark label placed above the axis.
+    output : Path, optional
+        Directory in which to save the figure.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The completed figure.
+    """
+    # --- Fetch traces ------------------------------------------------
+    # Sort each array by bin position (column 0) so that the ordering
+    # from hist1d and errorband is always consistent — the two trees
+    # are filled independently and may arrive in different row orders.
+    cv_hist = data.get_ratio_trace(
+        detector_num, detector_den, channel, "RATIO_CV", TraceType.HIST_CONTENTS
+    )
+    cv_hist = cv_hist[cv_hist[:, 0].argsort()]
+
+    pre_band = data.get_ratio_trace(
+        detector_num, detector_den, channel, "RATIO_CV", TraceType.HIST_ERROR_BAND
+    )
+    pre_band = pre_band[pre_band[:, 0].argsort()]
+
+    post_band = data.get_ratio_trace(
+        detector_num, detector_den, channel, "RATIO_BF", TraceType.HIST_ERROR_BAND
+    )
+    post_band = post_band[post_band[:, 0].argsort()]
+
+    err_hist = data.get_ratio_trace(
+        detector_num, detector_den, channel, "RATIO_ERR", TraceType.HIST_CONTENTS
+    )
+    err_hist = err_hist[err_hist[:, 0].argsort()]
+
+    # Bin edges from the CV hist1d trace (bin_low_edge + last bin_high_edge).
+    edges = np.r_[cv_hist[:, 1], cv_hist[-1, 2]]
+
+    # --- Layout ------------------------------------------------------
+    figure = plt.figure(figsize=(8, 8))
+    gspec = figure.add_gridspec(nrows=2, ncols=1, height_ratios=[4, 1], hspace=0.02)
+    ax_main = figure.add_subplot(gspec[0, 0])
+    ax_sub  = figure.add_subplot(gspec[1, 0], sharex=ax_main)
+    ax_main.tick_params(axis="x", which="both", labelbottom=False)
+
+    # --- Main panel --------------------------------------------------
+    pre_patch = add_error_band(
+        ax_main, edges, pre_band[:, 1],
+        yerr=[pre_band[:, 2], pre_band[:, 3]],
+        label="Pre-fit unc.",
+        color="black",
+        hatch="////",
+    )
+    ax_main.step(
+        edges, np.r_[pre_band[:, 1], pre_band[-1, 1]],
+        where="post", color="black", linewidth=1.5, zorder=2,
+    )
+
+    post_patch = add_error_band(
+        ax_main, edges, post_band[:, 1],
+        yerr=[post_band[:, 2], post_band[:, 3]],
+        label="Post-fit unc.",
+        color="red",
+        hatch=r"\\\\",
+    )
+    ax_main.step(
+        edges, np.r_[post_band[:, 1], post_band[-1, 1]],
+        where="post", color="red", linewidth=1.5, zorder=2,
+    )
+
+    if show_data:
+        try:
+            dat = data.get_ratio_trace(
+                detector_num, detector_den, channel, "RATIO_DATA",
+                TraceType.HIST_CONTENTS,
+            )
+            ax_main.errorbar(
+                dat[:, 0],
+                dat[:, 3],
+                xerr=0.5 * (dat[:, 2] - dat[:, 1]),
+                yerr=dat[:, 4] if dat.shape[1] > 4 else None,
+                fmt="ko",
+                markersize=4,
+                linewidth=1.0,
+                capsize=2 if dat.shape[1] > 4 else 0,
+                zorder=3,
+                label="Data",
+            )
+        except KeyError:
+            pass
+
+    # Legend
+    num_lbl = detector_num_label if detector_num_label is not None else str(detector_num)
+    den_lbl = detector_den_label if detector_den_label is not None else str(detector_den)
+    title = f"{num_lbl} / {den_lbl}"
+    if channel_label is not None:
+        title = f"{title}\n{channel_label}"
+    meta_patch = construct_meta_handle(code_version, selection_version)
+    h, _ = ax_main.get_legend_handles_labels()
+    legend = ax_main.legend(handles=[pre_patch, post_patch] + h + [meta_patch])
+    legend.set_title(title)
+    legend.get_title().set_fontweight("bold")
+    legend.get_title().set_fontsize(14)
+    legend.get_title().set_color("#d67a11")
+    texts = legend.get_texts()
+    texts[-1].set_fontsize(8)
+    texts[-1].set_alpha(0.6)
+
+    ax_main.set_ylabel(f"{num_lbl} / {den_lbl}")
+    if ylim is not None:
+        ax_main.set_ylim(ylim)
+    if xlim is not None:
+        ax_main.set_xlim(xlim)
+
+    # --- Sub-panel (error improvement) -------------------------------
+    err_edges = np.r_[err_hist[:, 1], err_hist[-1, 2]]
+    ax_sub.step(
+        err_edges, np.r_[err_hist[:, 3], err_hist[-1, 3]],
+        where="post", color="C0", linewidth=1.5,
+    )
+    ax_sub.axhline(1.0, color="gray", linestyle="--", linewidth=0.8)
+    ax_sub.set_ylabel("Post / Pre err.")
+    ax_sub.set_xlabel(xlabel)
+    if xlim is not None:
+        ax_sub.set_xlim(xlim)
+    if rlim is not None:
+        ax_sub.set_ylim(rlim)
+
+    mark_axis(ax_main, watermark, hadj=0.035)
+
+    if output is not None:
+        saver.save(figure, output, f"ratio_{detector_num}_{detector_den}_{channel}_{code_version}")
 
     return figure
 

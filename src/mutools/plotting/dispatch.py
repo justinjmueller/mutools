@@ -7,7 +7,7 @@ from typing import Union
 
 import toml
 
-from .profit import ProfitPlotData, histogram, overlay, uncertainty
+from .profit import ProfitPlotData, histogram, overlay, ratio, uncertainty
 
 # Map of plot type strings to their handler functions. New plot types
 # can be registered here as the module grows.
@@ -101,9 +101,36 @@ def run(config: Union[dict, str, Path]) -> None:
             overlay(data, **kwargs)
             continue
 
+        # ratio takes a detector pair rather than a list, so it is
+        # handled here rather than in the per-detector loop below.
+        if plot_type == "ratio":
+            channel = plot.get("channel", 0)
+            d_num = plot["detector_num"]
+            d_den = plot["detector_den"]
+            kwargs = {
+                "code_version": general["code_version"],
+                "selection_version": general["selection_version"],
+                "detector_num": d_num,
+                "detector_den": d_den,
+                "detector_num_label": general["detectors"][d_num],
+                "detector_den_label": general["detectors"][d_den],
+                "channel": channel,
+                "channel_label": general["channels"][channel] if "channels" in general else None,
+                "xlabel": plot["xlabel"],
+                "xlim": plot.get("xlim"),
+                "ylim": plot.get("ylim"),
+                "rlim": plot.get("rlim"),
+                "show_data": plot.get("show_data", True),
+                "output": output,
+            }
+            if "watermark" in plot:
+                kwargs["watermark"] = plot["watermark"]
+            ratio(data, **kwargs)
+            continue
+
         if plot_type not in _HANDLERS:
             raise ValueError(
-                f"Unsupported plot type: {plot_type!r}. Available types: {sorted(_HANDLERS) + ['overlay']}"
+                f"Unsupported plot type: {plot_type!r}. Available types: {sorted(_HANDLERS) + ['overlay', 'ratio']}"
             )
 
         handler = _HANDLERS[plot_type]

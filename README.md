@@ -162,6 +162,51 @@ ylabel    = "Events / bin"
 colors    = ["C1", "C4"]   # optional: one per detector
 ```
 
+## Detector ratio plots
+
+`ratio` overlays the pre- and post-fit systematic uncertainty bands for a
+numerator/denominator detector pair. The main panel shows the ratio central
+value as step lines (black = pre-fit, red = post-fit) with hatched
+uncertainty bands. When data ratio points are present in the file they are
+overlaid as errorbars, including statistical uncertainties when a
+`bin_error` column is available. A sub-panel shows the error improvement
+(post-fit error / pre-fit error) as a step plot.
+
+```python
+from mutools.plotting.profit import ratio
+
+ratio(
+    data,
+    detector_num=0, detector_den=1, channel=0,
+    xlabel="Reconstructed neutrino energy [GeV]",
+    code_version="v1.0", selection_version="v2.3",
+    detector_num_label="SBND",
+    detector_den_label="ICARUS",
+    channel_label="CC Inclusive",   # optional: shown beneath pair label
+    show_data=True,                 # optional: overlay RATIO_DATA points
+    ylim=(3.0, 10.0),               # optional
+    rlim=(0.3, 1.1),                # optional: sub-panel y range
+)
+```
+
+In TOML, `ratio` takes a detector pair rather than a list:
+
+```toml
+[[plot]]
+type         = "ratio"
+detector_num = 0
+detector_den = 1
+channel      = 0
+xlabel       = "Reconstructed neutrino energy [GeV]"
+show_data    = true      # optional, default true
+xlim         = [0.0, 3.0]
+ylim         = [3.0, 10.0]
+rlim         = [0.3, 1.1]
+```
+
+Detector labels are looked up from `[general.detectors]` automatically.
+The channel label is picked up from `[general.channels]` when present.
+
 ## PRISM schematic
 
 `prism_schematic` produces a two-panel figure (SBND | ICARUS) showing

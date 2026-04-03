@@ -135,7 +135,15 @@ def run(config: Union[dict, str, Path]) -> None:
 
         handler = _HANDLERS[plot_type]
 
-        for detector in plot["detectors"]:
+        detectors = plot["detectors"]
+        use_ratio = plot.get("use_ratio")
+        if use_ratio is not None and len(use_ratio) != len(detectors):
+            raise ValueError(
+                f"'use_ratio' length ({len(use_ratio)}) must match "
+                f"'detectors' length ({len(detectors)})."
+            )
+
+        for i, detector in enumerate(detectors):
             channel = plot.get("channel", 0)
             # Common kwargs shared across all plot types.
             kwargs = {
@@ -168,5 +176,10 @@ def run(config: Union[dict, str, Path]) -> None:
                 )
             elif plot_type == "uncertainty":
                 kwargs["tags"] = plot["tags"]
+                if use_ratio is not None:
+                    kwargs["detector2"] = use_ratio[i]
+                    kwargs["detector_label"] = (
+                        f"{general['detectors'][detector]} / {general['detectors'][use_ratio[i]]}"
+                    )
 
             handler(data, **kwargs)

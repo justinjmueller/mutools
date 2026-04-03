@@ -137,12 +137,24 @@ class ProfitPlotData:
         self._raw_data[TraceType.FRAC_SYST] = dict()
         self._data[TraceType.FRAC_SYST] = dict()
         deserialize = ["bin_center", "bin_low_edge", "bin_high_edge", "bin_content"]
-        cols = ["mode", "detector", "channel", "tag", "systname"]
-        for k, group in data.groupby(cols):
-            name = f"{k[0]}:{k[1]}:{k[2]}:{k[3]}:{k[4]}"
-            raw = group[deserialize].to_numpy()
-            self._raw_data[TraceType.FRAC_SYST][name] = raw
-            self._data[TraceType.FRAC_SYST][name] = raw
+        # Keys are normalised to mode:detector:channel:detector2:tag:systname
+        # regardless of whether the file contains the detector2 branch.  For
+        # older files that lack the branch, detector2 is synthesised as equal
+        # to detector (the standard non-ratio case).
+        if "detector2" in data.columns:
+            cols = ["mode", "detector", "channel", "detector2", "tag", "systname"]
+            for k, group in data.groupby(cols):
+                name = f"{k[0]}:{k[1]}:{k[2]}:{k[3]}:{k[4]}:{k[5]}"
+                raw = group[deserialize].to_numpy()
+                self._raw_data[TraceType.FRAC_SYST][name] = raw
+                self._data[TraceType.FRAC_SYST][name] = raw
+        else:
+            cols = ["mode", "detector", "channel", "tag", "systname"]
+            for k, group in data.groupby(cols):
+                name = f"{k[0]}:{k[1]}:{k[2]}:{k[1]}:{k[3]}:{k[4]}"
+                raw = group[deserialize].to_numpy()
+                self._raw_data[TraceType.FRAC_SYST][name] = raw
+                self._data[TraceType.FRAC_SYST][name] = raw
 
     def get_ratio_trace(
         self,
@@ -269,7 +281,7 @@ def add_error_band(
     edges: np.ndarray,
     y: np.ndarray,
     yerr: np.ndarray | list[np.ndarray],
-    label: str = "Total Error Band",
+    label: str = "Flux+Interaction Uncertainty",
     color: str = "black",
     hatch: str = "////",
 ) -> Patch:
@@ -921,6 +933,7 @@ def uncertainty(
     xlabel: str,
     code_version: str,
     selection_version: str,
+    detector2: Optional[int] = None,
     xlim: Optional[Tuple[float, float]] = None,
     ylim: Optional[Tuple[float, float]] = None,
     detector_label: Optional[str] = None,
@@ -954,6 +967,10 @@ def uncertainty(
     selection_version : str
         The version of the selection used to generate the plot, to be
         included in the legend for metadata purposes.
+    detector2 : Optional[int]
+        The denominator detector index for ratio-based fractional
+        systematics.  When ``None`` (default), ``detector`` is used,
+        which corresponds to the standard non-ratio case.
     xlim : Optional[tuple[float, float]]
         The limits for the x-axis of the plot.
     ylim : Optional[tuple[float, float]]
@@ -975,13 +992,15 @@ def uncertainty(
     matplotlib.figure.Figure
         The completed figure.
     """
+    _detector2 = detector2 if detector2 is not None else detector
+
     figure = plt.figure(figsize=(8, 6))
     ax = figure.add_subplot()
 
     if colors is not None:
         ax.set_prop_cycle(color=[mcolors.to_rgba(c) for c in colors])
     for tag in tags:
-        name = f"0:{detector}:{channel}:{tag}:SUM"
+        name = f"0:{detector}:{channel}:{_detector2}:{tag}:SUM"
         trace = data.get_trace(name, TraceType.FRAC_SYST)
 
         # The trace shape is (N, 4): bin_center, bin_low_edge,

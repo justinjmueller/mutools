@@ -20,6 +20,6 @@ See [`io/README.md`](io/README.md) for full documentation.
 
 ### [`plotting/`](plotting/)
 
-Utilities for creating publication-quality figures, including PROfit-style stacked histograms, systematic uncertainty plots, style sheet management, and a TOML-driven plot dispatcher.
+Utilities for creating publication-quality figures, including PROfit-style stacked histograms, systematic uncertainty plots, SPINE training performance plots, style sheet management, and a TOML-driven plot dispatcher.
 
 See [`plotting/README.md`](plotting/README.md) for full documentation.

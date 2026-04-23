@@ -28,6 +28,36 @@ Tools for reading and visualizing data from [PROfit](https://github.com/ubneutri
 | `construct_proxy_stack(subchannels)` | Build legend `Patch` handles matching the default color cycle. |
 | `construct_meta_handle(...)` | Build a legend `Patch` carrying version metadata. |
 
+### `spine`
+
+Figure-level wrapper for plotting SPINE training metrics. The low-level
+axis helper `_plot_metric` is semi-internal and not exported from
+`mutools.plotting`.
+
+| Function | Description |
+|---|---|
+| `plot_train_performance(path, metrics, ...)` | Create a training performance figure from SPINE log files and optionally save it. |
+
+**Parameters for `plot_train_performance`:**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `path` | `Path` | — | Directory containing log CSV files. |
+| `metrics` | `dict[str, str]` | — | Keys are CSV column names; values are legend labels. |
+| `pattern` | `str` | `'train_*.csv'` | Glob pattern for training log files. |
+| `smooth` | `int` | `10` | Rolling-window smoothing size. `None` or `1` disables smoothing. |
+| `colors` | `list[str]` | `None` | One colour per metric. Defaults to `'C0'`, `'C1'`, … |
+| `ullabel` | `str` | `None` | Label above the upper-left corner of the plot. |
+| `urlabel` | `str` | `None` | Label above the upper-right corner of the plot. |
+| `xlim` | `tuple[float, float]` | `None` | X-axis limits. |
+| `ylim` | `tuple[float, float]` | `None` | Y-axis limits. |
+| `ylabel` | `str` | `None` | Y-axis label. |
+| `bpe` | `int` | `None` | Batches per epoch. When provided, validation checkpoints are overlaid. |
+| `val_stride` | `int` | `None` | Keep every *n*-th validation checkpoint. |
+| `val_checkpoint_stride` | `float` | `None` | Minimum epoch spacing between consecutive plotted validation checkpoints. |
+| `output` | `Path` | `None` | Output directory. Figure is not saved when `None`. |
+| `name` | `str` | `'train_performance'` | Filename stem (without extension). |
+
 ### `dispatch`
 
 TOML-driven dispatcher that reads a configuration and executes all defined plots without manual looping.

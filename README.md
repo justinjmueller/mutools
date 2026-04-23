@@ -207,6 +207,57 @@ rlim         = [0.3, 1.1]
 Detector labels are looked up from `[general.detectors]` automatically.
 The channel label is picked up from `[general.channels]` when present.
 
+## SPINE training performance
+
+`plot_train_performance` plots training metrics from SPINE log files. Multiple
+metrics can be overlaid on a single figure, with optional smoothing and
+validation checkpoints.
+
+```python
+from pathlib import Path
+from mutools.plotting import plot_train_performance
+
+plot_train_performance(
+    Path("logs/"),
+    metrics={"loss": "Total loss"},
+    ylabel="Loss",
+    smooth=10,
+)
+```
+
+Pass multiple metrics to overlay them on the same axes:
+
+```python
+plot_train_performance(
+    Path("logs/"),
+    metrics={"loss": "Total loss", "loss_seg": "Segmentation loss"},
+    ylabel="Loss",
+    smooth=10,
+)
+```
+
+Validation checkpoints are overlaid when `bpe` (batches per epoch) is provided.
+`val_checkpoint_stride` limits the density of plotted checkpoints to avoid
+crowding:
+
+```python
+plot_train_performance(
+    Path("logs/"),
+    metrics={"loss": "Total loss"},
+    ylabel="Loss",
+    bpe=500,
+    val_checkpoint_stride=5.0,   # minimum epoch spacing between val. points
+    ullabel="SBN Internal",
+    urlabel="SBND",
+    output=Path("figures/"),
+    name="training_loss",
+)
+```
+
+The `output` and `name` parameters follow the same convention as all other
+mutools plotting functions — `output` is a directory and `name` is the filename
+stem. The active `saver` settings (DPI, format, etc.) apply.
+
 ## PRISM schematic
 
 `prism_schematic` produces a two-panel figure (SBND | ICARUS) showing

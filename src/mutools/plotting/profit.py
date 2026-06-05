@@ -403,18 +403,19 @@ def construct_proxy_stack(
 
 
 def construct_meta_handle(
-    profit_version: str,
-    selection_version: str,
+    profit_version: Optional[str] = None,
+    selection_version: Optional[str] = None,
 ) -> Patch:
     """
     Construct a Patch for the legend that represents the metadata about
-    the plot, such as the PROfit version and selection version.
+    the plot, such as the PROfit version and selection version. If no
+    values are provided, an empty string will be used.
 
     Parameters
     ----------
-    profit_version : str
+    profit_version : Optional[str]
         The version of PROfit used to generate the plot.
-    selection_version : str
+    selection_version : Optional[str]
         The version of the selection used to generate the plot.
 
     Returns
@@ -423,7 +424,11 @@ def construct_meta_handle(
         A matplotlib Patch object representing the metadata, which can
         be used for the legend.
     """
-    label = f"PROfit {profit_version}\nmedulla {selection_version}"
+    label = ""
+    if profit_version is not None:
+        label += f"PROfit {profit_version}\n"
+    if selection_version is not None:
+        label += f"medulla {selection_version}"
     patch = Patch(
         facecolor="none",
         edgecolor="none",
@@ -440,9 +445,9 @@ def histogram(
     channel: int,
     xlabel: str,
     ylabel: str,
-    code_version: str,
-    selection_version: str,
     subchannels: list[str],
+    code_version: Optional[str] = None,
+    selection_version: Optional[str] = None,
     xlim: Optional[Tuple[float, float]] = None,
     ylim: Optional[Tuple[float, float]] = None,
     rlim: Optional[Tuple[float, float]] = None,
@@ -479,15 +484,15 @@ def histogram(
         The label for the x-axis of the plot.
     ylabel : str
         The label for the y-axis of the plot.
-    code_version : str
-        The version of the code used to generate the plot, to be
-        included in the legend for metadata purposes.
-    selection_version : str
-        The version of the selection used to generate the plot, to be
-        included in the legend for metadata purposes.
     subchannels : list[str]
         List of subchannel names corresponding to the traces in the
         data object.
+    code_version : Optional[str]
+        The version of the code used to generate the plot, to be
+        included in the legend for metadata purposes.
+    selection_version : Optional[str]
+        The version of the selection used to generate the plot, to be
+        included in the legend for metadata purposes.
     xlim : Optional[tuple[float, float]]
         The limits for the x-axis of the plot.
     ylim : Optional[tuple[float, float]]
@@ -731,8 +736,8 @@ def ratio(
     detector_den: int,
     channel: int,
     xlabel: str,
-    code_version: str,
-    selection_version: str,
+    code_version: Optional[str] = None,
+    selection_version: Optional[str] = None,
     xlim: Optional[Tuple[float, float]] = None,
     ylim: Optional[Tuple[float, float]] = None,
     rlim: Optional[Tuple[float, float]] = None,
@@ -769,9 +774,9 @@ def ratio(
         Channel index.
     xlabel : str
         Label for the x-axis (shown on the sub-panel).
-    code_version : str
+    code_version : Optional[str]
         PROfit version string included in the legend metadata.
-    selection_version : str
+    selection_version : Optional[str]
         Selection version string included in the legend metadata.
     xlim : tuple[float, float], optional
         x-axis limits.
@@ -931,8 +936,8 @@ def uncertainty(
     channel: int,
     tags: list,
     xlabel: str,
-    code_version: str,
-    selection_version: str,
+    code_version: Optional[str] = None,
+    selection_version: Optional[str] = None,
     detector2: Optional[int] = None,
     xlim: Optional[Tuple[float, float]] = None,
     ylim: Optional[Tuple[float, float]] = None,
@@ -961,10 +966,10 @@ def uncertainty(
         group of systematics in the data object.
     xlabel : str
         The label for the x-axis of the plot.
-    code_version : str
+    code_version : Optional[str]
         The version of the code used to generate the plot, to be
         included in the legend for metadata purposes.
-    selection_version : str
+    selection_version : Optional[str]
         The version of the selection used to generate the plot, to be
         included in the legend for metadata purposes.
     detector2 : Optional[int]
@@ -1049,8 +1054,8 @@ def overlay(
     channel: int,
     xlabel: str,
     ylabel: str,
-    code_version: str,
-    selection_version: str,
+    code_version: Optional[str] = None,
+    selection_version: Optional[str] = None,
     xlim: Optional[Tuple[float, float]] = None,
     ylim: Optional[Tuple[float, float]] = None,
     detector_labels: Optional[list[str]] = None,
@@ -1084,9 +1089,9 @@ def overlay(
         Label for the x-axis.
     ylabel : str
         Label for the y-axis.
-    code_version : str
+    code_version : Optional[str]
         PROfit version string included in the legend metadata.
-    selection_version : str
+    selection_version : Optional[str]
         Selection version string included in the legend metadata.
     xlim : tuple[float, float], optional
         x-axis limits.

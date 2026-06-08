@@ -65,8 +65,8 @@ def run(config: Union[dict, str, Path]) -> None:
 
     # Shared keyword arguments that apply to every plot.
     base = {
-        "code_version": general["code_version"],
-        "selection_version": general["selection_version"],
+        "code_version": general.get("code_version"),
+        "selection_version": general.get("selection_version"),
         "subchannels": general["subchannels"],
         "output": output,
         "counter_index": general.get("counter_index"),
@@ -80,8 +80,6 @@ def run(config: Union[dict, str, Path]) -> None:
             detectors = plot["detectors"]
             channel = plot.get("channel", 0)
             kwargs = {
-                "code_version": general["code_version"],
-                "selection_version": general["selection_version"],
                 "variable": plot["variable"],
                 "detectors": detectors,
                 "channel": channel,
@@ -94,10 +92,9 @@ def run(config: Union[dict, str, Path]) -> None:
                 "scale_by_width": plot.get("scale_by_width", "disabled") == "enabled",
                 "output": output,
             }
-            if "watermark" in plot:
-                kwargs["watermark"] = plot["watermark"]
-            if "colors" in plot:
-                kwargs["colors"] = plot["colors"]
+            for opt in ["watermark", "colors", "code_version", "selection_version"]:
+                if opt in plot:
+                    kwargs[opt] = plot[opt]
             overlay(data, **kwargs)
             continue
 
@@ -108,8 +105,6 @@ def run(config: Union[dict, str, Path]) -> None:
             d_num = plot["detector_num"]
             d_den = plot["detector_den"]
             kwargs = {
-                "code_version": general["code_version"],
-                "selection_version": general["selection_version"],
                 "detector_num": d_num,
                 "detector_den": d_den,
                 "detector_num_label": general["detectors"][d_num],
@@ -123,8 +118,9 @@ def run(config: Union[dict, str, Path]) -> None:
                 "show_data": plot.get("show_data", True),
                 "output": output,
             }
-            if "watermark" in plot:
-                kwargs["watermark"] = plot["watermark"]
+            for opt in ["colors", "watermark", "code_version", "selection_version"]:
+                if opt in plot:
+                    kwargs[opt] = plot[opt]
             ratio(data, **kwargs)
             continue
 

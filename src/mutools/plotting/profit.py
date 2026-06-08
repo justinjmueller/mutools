@@ -4,6 +4,7 @@ methods for data access, manipulation, and visualization.
 """
 
 from pathlib import Path
+import math
 import numpy as np
 import pandas as pd
 import uproot
@@ -14,6 +15,23 @@ from .save import saver, FixedPrecisionScalarFormatter
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
+
+
+def _infer_mark_hadj(ax) -> float:
+    """Return the hadj needed to clear the y-axis scientific-notation offset text.
+
+    The offset text width grows with the exponent character count: negative
+    exponents gain a '-' sign, and multi-digit exponents gain extra digits.
+    Each extra character beyond a positive single-digit exponent (the baseline)
+    adds roughly 0.015 in axis-fraction units.
+    """
+    ymin, ymax = ax.get_ylim()
+    max_abs = max(abs(ymin), abs(ymax))
+    if max_abs == 0:
+        return 0.035
+    exp = int(math.floor(math.log10(max_abs)))
+    extra = (1 if exp < 0 else 0) + max(0, len(str(abs(exp))) - 1)
+    return 0.035 + extra * 0.015
 
 
 class TraceType(Enum):
@@ -721,7 +739,8 @@ def histogram(
             ax_ratio.set_xlim(xlim)
 
     # Mark the axis with the appropriate label
-    mark_axis(ax, watermark, hadj=0.035)
+    _hadj = saver.mark_hadj if saver.mark_hadj is not None else _infer_mark_hadj(ax)
+    mark_axis(ax, watermark, hadj=_hadj)
 
     if output is not None:
         saver.save(figure, output, f"hist_{detector}_{variable}_{code_version}")
@@ -921,7 +940,8 @@ def ratio(
     if rlim is not None:
         ax_sub.set_ylim(rlim)
 
-    mark_axis(ax_main, watermark, hadj=0.035)
+    _hadj = saver.mark_hadj if saver.mark_hadj is not None else _infer_mark_hadj(ax_main)
+    mark_axis(ax_main, watermark, hadj=_hadj)
 
     if output is not None:
         saver.save(figure, output, f"ratio_{detector_num}_{detector_den}_{channel}_{code_version}")
@@ -1038,7 +1058,8 @@ def uncertainty(
     texts[-1].set_fontsize(8)
     texts[-1].set_alpha(0.6)
 
-    mark_axis(ax, watermark, hadj=0.035)
+    _hadj = saver.mark_hadj if saver.mark_hadj is not None else _infer_mark_hadj(ax)
+    mark_axis(ax, watermark, hadj=_hadj)
 
     if output is not None:
         saver.save(figure, output, f"uncertainty_{detector}_{code_version}")
@@ -1166,7 +1187,8 @@ def overlay(
     else:
         ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
-    mark_axis(ax, watermark, hadj=0.035)
+    _hadj = saver.mark_hadj if saver.mark_hadj is not None else _infer_mark_hadj(ax)
+    mark_axis(ax, watermark, hadj=_hadj)
 
     if output is not None:
         var_str = "-".join(str(v) for v in variables)

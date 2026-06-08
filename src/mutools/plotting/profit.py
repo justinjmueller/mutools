@@ -626,9 +626,46 @@ def histogram(
     # values and uncertainties from the band trace. We also capture
     # the Patch object returned by the add_error_band function so that
     # we can include it in the legend.
-    if not disable_systematics:
-        band = data.get_trace(f"{variable}:0:{detector}:{channel}:total:CV", TraceType.HIST_ERROR_BAND, scaled=scale_by_width)
+    if not disable_systematics or ratio:
+        band = data.get_trace(
+            f"{variable}:0:{detector}:{channel}:total:CV", TraceType.HIST_ERROR_BAND, scaled=scale_by_width
+        )
         band_patch = add_error_band(ax, edges, band[:, 1], yerr=[band[:, 2], band[:, 3]])
+
+    # Overlay data points on the main panel when ratio == "data".
+    # Fetch the three traces here so they can be reused in the ratio
+    # panel below without a second round-trip to the data store.
+    data_handle = None
+    if ratio == "data":
+        data_trace = data.get_trace(
+            f"{variable}:0:{detector}:{channel}:total:DATA", TraceType.HIST_CONTENTS, scaled=scale_by_width
+        )
+        raw_data = data.get_trace(
+            f"{variable}:0:{detector}:{channel}:total:DATA", TraceType.HIST_CONTENTS, scaled=False
+        )
+        raw_mc = data.get_trace(
+            f"{variable}:0:{detector}:{channel}:total:CV", TraceType.HIST_CONTENTS, scaled=False
+        )
+        if raw_data.shape[1] > 4:
+            yerr_data = data_trace[:, 4]
+        elif scale_by_width:
+            widths = data_trace[:, 2] - data_trace[:, 1]
+            yerr_data = np.sqrt(np.maximum(raw_data[:, 3], 0.0)) / widths
+        else:
+            yerr_data = np.sqrt(np.maximum(raw_data[:, 3], 0.0))
+        data_handle = ax.errorbar(
+            data_trace[:, 0],
+            data_trace[:, 3],
+            xerr=0.5 * (data_trace[:, 2] - data_trace[:, 1]),
+            yerr=yerr_data,
+            fmt="ko",
+            markersize=4,
+            linewidth=1.0,
+            capsize=2,
+            zorder=3,
+            label="Data",
+        )
+
     # Construct a Patch for the legend that represents the metadata
     # about the plot, such as the PROfit version and selection version,
     # and include this in the legend along with the proxy stack and the
@@ -638,8 +675,9 @@ def histogram(
 
     # Add the legend for the stacked histogram and the error band using
     # the proxy stack and the band patch.
-    ext = [band_patch] if not disable_systematics else []
-    legend = ax.legend(handles=proxy_stack + ext + [meta_patch])
+    ext = [band_patch] if (not disable_systematics or ratio) else []
+    data_ext = [data_handle] if data_handle is not None else []
+    legend = ax.legend(handles=proxy_stack + ext + data_ext + [meta_patch])
 
     if detector_label is not None:
         title = detector_label if channel_label is None else f"{detector_label}\n{channel_label}"
@@ -689,15 +727,13 @@ def histogram(
         )
 
         if ratio == "data":
-            data_trace = data.get_trace(
-                f"{variable}:0:{detector}:{channel}:total:DATA", TraceType.HIST_CONTENTS, scaled=scale_by_width
-            )
-            data_band = data.get_trace(
-                f"{variable}:0:{detector}:{channel}:total:DATA", TraceType.HIST_ERROR_BAND, scaled=scale_by_width
-            )
-            y = data_band[:, 1] / data_trace[:, 3]
-            ylo = data_band[:, 2] / data_trace[:, 3]
-            yhi = data_band[:, 3] / data_trace[:, 3]
+            y = data_trace[:, 3] / band[:, 1]
+            if raw_data.shape[1] > 4:
+                stat_err = raw_data[:, 4] / raw_mc[:, 3]
+            else:
+                stat_err = np.sqrt(np.maximum(raw_data[:, 3], 0.0)) / raw_mc[:, 3]
+            ylo = stat_err
+            yhi = stat_err
 
         elif ratio == "null":
             y = np.ones_like(band[:, 1])

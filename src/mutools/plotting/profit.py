@@ -1000,6 +1000,7 @@ def uncertainty(
     detector_label: Optional[str] = None,
     watermark: Optional[str] = r"$\bf{SBN}$ Internal",
     colors: Optional[list] = None,
+    label_map: Optional[dict] = None,
     output: Optional[Path] = None,
     **kwargs,
 ) -> "matplotlib.figure.Figure":
@@ -1044,6 +1045,12 @@ def uncertainty(
     colors : list, optional
         Color specs for each tag, in tag order. Any matplotlib color
         spec is accepted. Defaults to the active color cycle.
+    label_map : dict[str, str], optional
+        Mapping from tag key to the label shown in the legend. Only the
+        displayed text is affected; the tag is still used unchanged to
+        look up the trace in the data object. Tags absent from the map
+        fall back to the tag string itself. Example:
+        ``{"TOTAL": "Total", "xsec": "Cross Section"}``.
     output : Optional[Path]
         Directory in which to save the figure. The filename is
         constructed from ``detector`` and ``code_version``.
@@ -1071,7 +1078,7 @@ def uncertainty(
             np.concatenate([trace[:, 1], trace[-1:, 2]]),
             np.concatenate([trace[:, 3], trace[:, 3][-1:]]),
             where="post",
-            label=tag,
+            label=label_map.get(tag, tag) if label_map is not None else tag,
         )
 
     ax.set_xlabel(xlabel)

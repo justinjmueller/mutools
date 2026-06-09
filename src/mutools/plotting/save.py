@@ -73,6 +73,14 @@ class FigureSaver:
         When set, a :class:`FixedPrecisionScalarFormatter` with this many
         decimal places is applied to the y-axis of every plot.  When
         ``None`` (default), matplotlib chooses precision automatically.
+    mark_hadj : float or None
+        Horizontal adjustment (in axis-fraction units) applied to the
+        watermark label placed by :func:`~mutools.plotting.helpers.mark_axis`.
+        When ``None`` (default), the adjustment is inferred automatically
+        from the y-axis exponent so that the label clears the scientific-
+        notation offset text (``"×10ⁿ"``).  Set explicitly when the
+        automatic inference produces the wrong result — for example, when
+        the y-axis shows very large negative exponents.
     """
 
     def __init__(self) -> None:
@@ -81,6 +89,7 @@ class FigureSaver:
         self.bbox_inches: str = "tight"
         self.rasterized: bool = False
         self.ytick_precision: Optional[int] = None
+        self.mark_hadj: Optional[float] = None
 
     def configure(
         self,
@@ -90,6 +99,7 @@ class FigureSaver:
         bbox_inches: Optional[str] = None,
         rasterized: Optional[bool] = None,
         ytick_precision: Optional[int] = None,
+        mark_hadj: Optional[float] = None,
     ) -> None:
         """
         Update one or more persistent save settings.
@@ -111,6 +121,10 @@ class FigureSaver:
             Number of decimal places for y-axis tick label coefficients.
             Applies a :class:`FixedPrecisionScalarFormatter` to every plot.
             Pass ``None`` to restore automatic precision.
+        mark_hadj : float, optional
+            Override the automatic horizontal adjustment for the watermark
+            label.  Expressed as a fraction of the x-axis range.  Pass
+            ``None`` to restore automatic inference.
         """
         if dpi is not None:
             self.dpi = int(dpi)
@@ -126,6 +140,8 @@ class FigureSaver:
             self.rasterized = bool(rasterized)
         if ytick_precision is not None:
             self.ytick_precision = int(ytick_precision)
+        if mark_hadj is not None:
+            self.mark_hadj = float(mark_hadj)
 
     @contextmanager
     def settings(self, **kwargs):
@@ -140,7 +156,7 @@ class FigureSaver:
         >>> with saver.settings(dpi=600, fmt="svg"):
         ...     histogram(data, ..., output="figures/")
         """
-        saved = {k: getattr(self, k) for k in ("dpi", "fmt", "bbox_inches", "rasterized", "ytick_precision")}
+        saved = {k: getattr(self, k) for k in ("dpi", "fmt", "bbox_inches", "rasterized", "ytick_precision", "mark_hadj")}
         self.configure(**kwargs)
         try:
             yield

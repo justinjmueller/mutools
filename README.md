@@ -330,3 +330,38 @@ import mutools.plotting as mp
 mp.list_styles()          # list available style sheets
 mp.use_style("rootlike")  # apply a style
 ```
+
+# Exposure (`mutools.exposure`)
+
+Infrastructure for defining, composing, and applying quality cuts to beam spill DataFrames.
+
+```python
+import mutools.exposure as exp
+
+bnb = exp.CutRegistry("bnb")
+
+@bnb.quality_cut(columns=["E1DCBOB"])
+def good_pot(df, *, threshold: float) -> pd.Series:
+    return df["E1DCBOB"] > threshold
+
+@bnb.quality_cut(columns=["inhibit"])
+def no_inhibit(df) -> pd.Series:
+    return df["inhibit"] == 0
+
+cut = (good_pot(threshold=0.0) & no_inhibit()).named("standard_bnb")
+
+mask = cut(df)
+summary = cut.summary(df)
+print(summary)
+```
+
+Cuts compose with `&`, `|`, and `~`. `.summary(df)` returns a hierarchical pass-rate breakdown. `.correlations(df)` computes phi coefficients, conditional failure probabilities, unique rejection fractions, and a sequential waterfall — each with a built-in plot method.
+
+Named cuts can also be defined in a TOML file and loaded in bulk:
+
+```python
+cuts = bnb.load_cuts("cuts.toml")
+cut = cuts["standard_bnb"]
+```
+
+See [`src/mutools/exposure/README.md`](src/mutools/exposure/README.md) for the full API reference.
